@@ -278,7 +278,7 @@ Graph getGraph(OptionParser::Option* options) {
 }
 
 
-std::pair<Clustering, Graph> startClusterer(Graph G, OptionParser::Option* options) {
+std::pair<Clustering, Graph> startClusterer(Graph& G, OptionParser::Option* options) {
 
 	// if getGraph returns empty graph, abort
 	if (G.isEmpty() && (G.getName() == "NONE")) {
@@ -522,8 +522,8 @@ int main(int argc, char **argv) {
 
 
 	// RUN PROGRAM
-
-	inspect(startClusterer(getGraph(options), options), options);
+	Graph G = getGraph(options);
+	inspect(startClusterer(G, options), options);
 	std::cout << "[EXIT] terminated normally" << std::endl;
 	return 0;
 }

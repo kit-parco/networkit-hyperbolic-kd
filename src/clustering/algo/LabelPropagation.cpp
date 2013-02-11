@@ -121,7 +121,7 @@ Clustering LabelPropagation::run(Graph& G) {
 		INFO("number of active nodes: " << numActive);
 
 
-#pragma omp parallel for
+#pragma omp parallel for schedule(guided)
 		for (int64_t i = 0; i < n; ++i) {
 			node v = shuffledNodes[i];
 
@@ -172,8 +172,7 @@ Clustering LabelPropagation::run(Graph& G) {
 		}
 
 		runtime.stop();
-		INFO(
-				"[DONE] LabelPropagation: iteration #" << nIterations << " - updated " << nUpdated << " labels, time spent: " << runtime.elapsedTag());
+		INFO("[DONE] LabelPropagation: iteration #" << nIterations << " - updated " << nUpdated << " labels, time spent: " << runtime.elapsedTag());
 
 	} // end while
 

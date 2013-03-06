@@ -30,12 +30,15 @@ Clustering Louvain::pass(Graph& G) {
 	// For each node we store a map that maps from cluster ID
 	// to weight of edges to that cluster, this needs to be updated when a change occurs
 	std::vector<std::map<cluster, edgeweight> > incidenceWeight(G.numberOfNodes());
-	G.parallelForWeightedEdges([&](node u, node v, edgeweight w) {
-		cluster C = zeta[v];
-		if (u != v) {
-			incidenceWeight[u][C] += w;
-		}
+	G.parallelForNodes([&](node u) {
+		G.forWeightedEdgesOf(u, [&](node u, node v, edgeweight w) {
+			cluster C = zeta[v];
+			if (u != v) {
+				incidenceWeight[u][C] += w;
+			}
+		});
 	});
+
 
 	// modularity update formula for node moves
 	// $$\Delta mod(u:\ C\to D)=\frac{\omega(u|D)-\omega(u|C\setminus v)}{\omega(E)}+\frac{2\cdot\vol(C\setminus u)\cdot\vol(u)-2\cdot\vol(D)\cdot\vol(u)}{4\cdot\omega(E)^{2}}$$
@@ -66,18 +69,19 @@ Clustering Louvain::pass(Graph& G) {
 
 
 	// $\omega(u | C \ u)$
-	auto omegaCut = [&](node u, cluster C){
-		return incidenceWeight[u][C];
+	auto omegaCut = [&](node u, cluster C) {
+		edgeweight w = incidenceWeight[u][C];
+		return w;
 
-		edgeweight sum = 0.0;
-		G.forWeightedEdgesOf(u, [&](node u, node v, edgeweight w){
-			if (zeta[v] == C) {
-				if (v != u){
-					sum += w;
-				}
-			}
-		});
-		return sum;
+//		edgeweight sum = 0.0;
+//		G.forWeightedEdgesOf(u, [&](node u, node v, edgeweight w){
+//			if (zeta[v] == C) {
+//				if (v != u){
+//					sum += w;
+//				}
+//			}
+//		});
+//		return sum;
 	};
 
 
@@ -102,15 +106,17 @@ Clustering Louvain::pass(Graph& G) {
 	bool change; // change in last iteration?
 	do {
 		i += 1;
-		DEBUG("Louvain pass: iteration # " << i);
+		DEBUG("---> Louvain pass: iteration # " << i);
 		change = false; // is clustering stable?
 
 		// try to improve modularity by moving a node to neighboring clusters
-		auto moveNode = [&](node u){
+		auto moveNode = [&](node u) {
 			cluster C = zeta[u];
+			TRACE("Processing node " << u << " of cluster " << C);
+//			std::cout << ".";
 			cluster best;
 			double deltaBest = -0.5;
-			G.forNeighborsOf(u, [&](node v){
+			G.forNeighborsOf(u, [&](node v) {
 				TRACE("Neighbor " << v << ", which is still in cluster " << zeta[v]);
 				if (zeta[v] != zeta[u]) { // consider only nodes in other clusters (and implicitly only nodes other than u)
 					cluster D = zeta[v];
@@ -126,10 +132,18 @@ Clustering Louvain::pass(Graph& G) {
 
 				// update weight of edges to incident clusters
 				G.forWeightedNeighborsOf(u, [&](node v, edgeweight w) {
+					if (incidenceWeight[v][best] == 0) {
+#pragma omp critical
+						{
+							incidenceWeight[v][best] = w;
+						}
+					}
+					else {
+#pragma omp atomic update
+						incidenceWeight[v][best] += w;
+					}
 #pragma omp atomic update
 					incidenceWeight[v][zeta[u]] -= w;
-#pragma omp atomic update
-					incidenceWeight[v][best] += w;
 				});
 
 				zeta[u] = best; // move to best cluster
@@ -161,7 +175,9 @@ Clustering Louvain::pass(Graph& G) {
 			ERROR("unknown parallelization strategy: " << this->parallelism);
 			exit(1);
 		}
-	} while (change);
+
+//		std::cout << std::endl;
+	} while (change && i < MAX_LOUVAIN_ITERATIONS);
 
 	return zeta;
 }

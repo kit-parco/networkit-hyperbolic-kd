@@ -19,6 +19,8 @@
 #include <sstream>
 
 #include "../auxiliary/Log.h"
+#include "../Globals.h"
+#include "../viz/Point.h"
 
 #define none -1
 
@@ -41,44 +43,51 @@ protected:
 	template<class T>
 	class Coordinates {
 	private:
-		count nv; //!< number of vertices
-		count dxy; //!< dimension of coordinates
-		std::vector<T> data; //!< array of coordinates, length nv * dxy
+		std::vector<Point<T> > data;
 
 	public:
 		Coordinates() {}
-		void init(count numVertices, count dimensions) {
-			nv = numVertices;
-			dxy = dimensions;
-			data.reserve(nv * dxy);
+
+		void init(count numNodes) {
+			data.resize(numNodes);
 		}
 
 		void setCoordinate(node v, count dim, T value) {
-			data[v * dxy + dim] = value;
+			data[v].setValue(dim, value);
 		}
 
 		T getCoordinate(node v, count dim) {
-			return data[v * dxy + dim];
+			return data[v].getValue(dim);
 		}
 
 		T minCoordinate(count dim) {
-			T value = data[dim];
-			for (index i = dim + dxy; i < nv; i += dxy) {
-				if (data[i] < value) {
-					value = data[i];
+			T value = data[0].getValue(dim);
+			for (index i = 1; i < data.size(); ++i) {
+				T temp = data[i].getValue(dim);
+				if (temp < value) {
+					value = temp;
 				}
 			}
 			return value;
 		}
 
 		T maxCoordinate(count dim) {
-			T value = data[dim];
-			for (index i = dim + dxy; i < nv; i += dxy) {
-				if (data[i] > value) {
-					value = data[i];
+			T value = data[0].getValue(dim);
+			for (index i = 1; i < data.size(); ++i) {
+				T temp = data[i].getValue(dim);
+				if (temp > value) {
+					value = temp;
 				}
 			}
 			return value;
+		}
+
+		/**
+		 * Insert coordinates of a new vertex.
+		 */
+		void addCoordinates(std::vector<T>& values) {
+			Point<T> p(values);
+			data.push_back(p);
 		}
 
 		virtual ~Coordinates() {}
@@ -239,6 +248,11 @@ public:
 	node addNode();
 
 	/**
+	 * Add a new node to the graph with coordinates @a x and @y and return it.
+	 */
+	node addNode(float x, float y);
+
+	/**
 	 * Remove an isolated node from the graph.
 	 *
 	 * Although it would be convenient to remove all incident edges at the same time,
@@ -295,8 +309,8 @@ public:
 		return coordinates.maxCoordinate(dim);
 	}
 
-	void initCoordinates(count dimensions) {
-		coordinates.init(n, dimensions);
+	void initCoordinates() {
+		coordinates.init(n);
 	}
 
 	/** ATTRIBUTES **/

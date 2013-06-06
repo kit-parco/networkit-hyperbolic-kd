@@ -10,6 +10,8 @@
 
 #include <gtest/gtest.h>
 
+#include "../Conductance2.h"
+
 namespace NetworKit {
 
 class SCDGTest: public testing::Test {

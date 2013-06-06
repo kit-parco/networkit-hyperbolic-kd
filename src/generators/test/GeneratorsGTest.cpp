@@ -1,5 +1,5 @@
 /*
- * GeneratorsTest.cpp
+Dy * GeneratorsTest.cpp
  *
  *  Created on: 09.04.2013
  *      Author: cls
@@ -86,7 +86,7 @@ TEST_F(GeneratorsGTest, viewDynamicBarabasiAlbertGenerator) {
 }
 
 
-TEST_F(GeneratorsGTest, testStaticPubWebGenerator) {
+TEST_F(GeneratorsGTest, tryStaticPubWebGenerator) {
 	count n = 800;
 	count numCluster = 40;
 	count maxNumNeighbors = 20;
@@ -104,6 +104,37 @@ TEST_F(GeneratorsGTest, testStaticPubWebGenerator) {
 	PostscriptWriter psWriter(G, true);
 	psWriter.write(clustering, "output/pubweb-lp-cluster.eps");
 }
+
+
+//TEST_F(GeneratorsGTest, tryDynamicPubWebGenerator) {
+//
+//	count numInitialNodes = 100;
+//	count numberOfDenseAreas = 6;
+//	float neighborhoodRadius = 0.1;
+//	count maxNumberOfNeighbors = 12;
+//
+//	Graph G(0); // empty graph
+//	GraphEventProxy proxy(G);
+//
+//	DynamicGraphGenerator* gen = new DynamicPubWebGenerator(
+//			proxy, numInitialNodes, numberOfDenseAreas, neighborhoodRadius, maxNumberOfNeighbors);
+//
+//	DEBUG("before init graph");
+//	gen->initializeGraph();
+//	DEBUG("after init graph");
+//
+//	EXPECT_EQ(numInitialNodes, G.numberOfNodes()) << "initial number of nodes";
+//
+//	count numIterations = 10;
+//	count iter = 0;
+//
+//	gen->generateWhile([&]() {
+//				++iter;
+//				return ( iter < numIterations );
+//			});
+//
+//	DEBUG("m = " << G.numberOfEdges());
+//}
 
 
 TEST_F(GeneratorsGTest, tryBTERGenerator) {

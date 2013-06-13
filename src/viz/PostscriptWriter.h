@@ -16,7 +16,6 @@
 #include <cstdio>
 #include <climits>
 
-
 #include "../graph/Graph.h"
 #include "../clustering/Clustering.h"
 #include "../clustering/ClusteringGenerator.h"

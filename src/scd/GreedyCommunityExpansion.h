@@ -26,7 +26,7 @@ class GreedyCommunityExpansion: public NetworKit::SelectiveCommunityDetector {
 public:
 
 	class QualityObjective {
-	private:
+	public:
 		Graph* G;								//!< pointer to the graph
 		std::unordered_set<node>* community;	//!< pointer to the current community
 
@@ -85,7 +85,7 @@ public:
 	 * is to improve the community when it is included.
 	 */
 	class Acceptability {
-	private:
+	public:
 		Graph* G;								//!< pointer to current graph
 		std::unordered_set<node>* community;	//!< pointer to current community
 		std::unordered_set<node>* shell;		//!< pointer to current shell

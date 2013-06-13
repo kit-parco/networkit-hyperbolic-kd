@@ -24,7 +24,7 @@ std::unordered_set<node> GreedyCommunityExpansion::run(Graph& G, node s) {
 	std::unordered_set<node> shell; // shell are the nodes outside of the
 	                                // community with edges to nodes inside
 
-	std::map<node,double,double> acceptanceValues;
+	std::map<node,double> acceptanceValues;
 
 	GreedyCommunityExpansion::NodeClusterSimilarity acceptability(&G, &community, &shell);
 	GreedyCommunityExpansion::Conductance conductance(&G, &community);
@@ -32,6 +32,7 @@ std::unordered_set<node> GreedyCommunityExpansion::run(Graph& G, node s) {
 	double currentObjectiveValue = conductance.getValue(s);
 	node vMax;
 	double acceptanceMax = 0;
+	bool expanded = true;
 
 	community.insert(s);
 
@@ -40,26 +41,53 @@ std::unordered_set<node> GreedyCommunityExpansion::run(Graph& G, node s) {
 	});
 
 
-	do {
+
+	while(expanded) {
+		expanded = false;
 		for (node v : shell) {
+			acceptanceValues.insert(std::pair<node,double> (v, acceptability.getValue(v)));
 		}
-
-
-
-
-
-
-
-		if(conductance.getValue(vMax) <= currentObjectiveValue){
-			community.insert(vMax);
-			shell.erase(vMax);
-			G.forNeighborsOf(vMax, [&](node v){
-				if (community.find(v) == community.end()) {
-					shell.insert(v);
+//for strong symmetric graphs still not well defined
+		while(acceptanceValues.size() != 0) {
+			acceptanceMax = 0;
+			for(auto it = acceptanceValues.begin(); it != acceptanceValues.end(); ++it ) {
+				if (it ->second > acceptanceMax) {
+					vMax = it->first;
+					acceptanceMax = it->second;
+				} else if(!it ->second < acceptanceMax) {
+					if (conductance.getValue(vMax) > conductance.getValue(it->first)) {
+						vMax = it->first;
+						acceptanceMax = it->second;
+					} else if (!conductance.getValue(vMax) < conductance.getValue(it->first)) {
+						if (G.degree(it->first) > G.degree(vMax)) {
+							vMax = it->first;
+							acceptanceMax = it->second;
+						} else if (!G.degree(it->first) < G.degree(vMax)) {
+							if (it->first < vMax) {
+								vMax = it->first;
+								acceptanceMax = it->second;
+							}
+						}
+					}
 				}
-			});
+			}
+// > or >=
+			if(conductance.getValue(vMax) > currentObjectiveValue){
+				community.insert(vMax);
+				expanded = true;
+				currentObjectiveValue = conductance.getValue(vMax);
+				shell.erase(vMax);
+				G.forNeighborsOf(vMax, [&](node v){
+					if (community.find(v) == community.end()) {
+						shell.insert(v);
+					}
+				});
+				acceptanceValues.clear();
+			} else {
+				acceptanceValues.erase(acceptanceValues.find(vMax));
+			}
 		}
-	} while (true);
+	}
 
 
 	// TODO: optional trimming phase according to node fitness
@@ -158,8 +186,8 @@ double GreedyCommunityExpansion::Conductance::getValue(node v) {
 	});
 	community->erase(v);
 	if (volume == 0 || all-volume == 0)
-		return 1;
-	return boundary / std::min(volume, all-volume);
+		return 0;
+	return 1 - (boundary / std::min(volume, all-volume));
 }
 
 } /* namespace NetworKit */

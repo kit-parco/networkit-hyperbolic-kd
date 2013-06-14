@@ -111,15 +111,20 @@ TEST_F(SCDGTest, testNodeClusterSimilarity) {
 
 TEST_F(SCDGTest, tryCommunitySubgraph) {
 	GraphGenerator gen;
-	Graph G = gen.makeClusteredRandomGraph(42, 2, 0.6, 0.1);
+	Graph G = gen.makeCompleteGraph(10);
 
 	node s = 0; // seed node
 
 	GreedyCommunityExpansion GCE;
 	std::unordered_set<node> community = GCE.run(G, s);
 
+	DEBUG("Community size: " << community.size());
+
+
 	// get the subgraph of the community
-	Graph sub = Subgraph::fromNodes(G,community);
+	Graph sub = Subgraph::fromNodes(G, community);
+
+	DEBUG("Subgraph number of nodes: " << sub.numberOfNodes());
 
 	// write it to file
 	METISGraphWriter writer;

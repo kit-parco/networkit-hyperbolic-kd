@@ -19,6 +19,7 @@
 #include <sstream>
 #include <limits>
 #include <cstdint>
+#include <algorithm>
 
 #include "../auxiliary/Log.h"
 #include "../auxiliary/Debug.h"
@@ -160,7 +161,24 @@ public:
 
 	Graph(count n);
 
+	Graph(const Graph& other) = default;
+
+	Graph(Graph&& other) = default;
+
 	virtual ~Graph();
+
+
+	/**
+	 * Assignment operator
+	 */
+	Graph& operator=(Graph&& other) = default;
+
+	/**
+	 * Assignment operator
+	 */
+	Graph& operator=(const Graph& other) = default;
+
+
 
 	/**
 	 * Set name of graph.
@@ -379,6 +397,16 @@ public:
 	 * Iterate over all nodes of the graph and call handler (lambda closure).
 	 */
 	template<typename L> void forNodes(L handle) const;
+
+	/**
+	 * Iterate randomly over all nodes of the graph and call handler (lambda closure).
+	 */
+	template<typename L> void forNodesInRandomOrder(L handle);
+
+	/**
+	 * Iterate randomly over all nodes of the graph and call handler (lambda closure).
+	 */
+	template<typename L> void forNodesInRandomOrder(L handle) const;
 
 	/**
 	 * Iterate over all nodes of the graph and call handler (lambda closure) as long as the condition remains true.
@@ -1046,6 +1074,33 @@ inline void NetworKit::Graph::forNodes(C condition, L handle) const {
 		}
 	}
 }
+
+template<typename L>
+void NetworKit::Graph::forNodesInRandomOrder(L handle) {
+	std::vector<node> randVec(z);
+	for (node v = 0; v < z; ++v) {
+		randVec[v] = v;
+	}
+	random_shuffle(randVec.begin(), randVec.end());
+
+	for (node v = 0; v < z; ++v) {
+		node randv = randVec[v];
+		if (exists[randv]) {
+			handle(randv);
+		}
+	}
+}
+
+template<typename L>
+void NetworKit::Graph::forNodesInRandomOrder(L handle) const {
+	for (node v = 0; v < z; ++v) {
+		if (exists[v]) {
+			handle(v);
+		}
+	}
+}
+
+
 
 
 #endif /* GRAPH_H_ */

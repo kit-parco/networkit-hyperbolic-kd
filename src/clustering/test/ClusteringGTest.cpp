@@ -181,7 +181,7 @@ TEST_F(ClusteringGTest, testModularityParallelVsSequential) {
 	double modSeq = modularitySeq.getQuality(zeta, G);
 
 	// EXPECT_EQ(modPar, modSeq) << "Modularity values should be equal no matter if calculated in parallel or sequentially";
-	EXPECT_TRUE(NumericTools::equal(modPar, modSeq, 1e-12)) << "Modularity values should be equal within a small error no matter if calculated in parallel or sequentially";
+	EXPECT_TRUE(Aux::NumericTools::equal(modPar, modSeq, 1e-12)) << "Modularity values should be equal within a small error no matter if calculated in parallel or sequentially";
 
 }
 
@@ -269,13 +269,6 @@ TEST_F(ClusteringGTest, tryNMIDistance) {
 	EXPECT_EQ(0.0, distOne) << "NMID of two 1-clusterings should be 0.0";
 
 
-	Clustering random1 = clustGen.makeRandomClustering(G, 2);
-	Clustering random2 = clustGen.makeRandomClustering(G, 2);
-
-	double distRandom = NMID.getDissimilarity(G, random1, random2);
-	INFO("NMID for two random clusterings: " << distRandom);
-
-
 	Clustering singleton1 = clustGen.makeSingletonClustering(G);
 	Clustering singleton2 = clustGen.makeSingletonClustering(G);
 
@@ -284,6 +277,13 @@ TEST_F(ClusteringGTest, tryNMIDistance) {
 
 
 	EXPECT_EQ(0.0, distSingleton) << "NMID of two identical singleton clusterings should be 0.0";
+
+	Clustering random1 = clustGen.makeRandomClustering(G, 2);
+	Clustering random2 = clustGen.makeRandomClustering(G, 2);
+
+	double distRandom = NMID.getDissimilarity(G, random1, random2);
+	INFO("NMID for two random clusterings: " << distRandom);
+
 }
 
 } /* namespace NetworKit */

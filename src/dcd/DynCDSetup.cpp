@@ -40,8 +40,8 @@ void DynCDSetup::run() {
 	// initialize graph
 	gen->initializeGraph();
 
-	// store the resulting clusterings in here
-	std::vector<std::vector<Clustering> > results;
+	// store the resulting clusterings in results
+
 	for (count i = 0; i < this->detectors.size(); ++i) {
 		std::vector<Clustering> dynZeta;
 		results.push_back(dynZeta);
@@ -49,7 +49,6 @@ void DynCDSetup::run() {
 
 
 	// for all community detectors, perform run
-
 	while (G->time() < tMax) {
 		INFO("time: " << G->time() << " of " << tMax);
 		try {
@@ -85,6 +84,10 @@ void DynCDSetup::run() {
 
 Graph* DynCDSetup::getGraph() {
 	return this->G;
+}
+
+Graph DynCDSetup::getGraphCopy() {
+	return *(this->G);
 }
 
 } /* namespace NetworKit */

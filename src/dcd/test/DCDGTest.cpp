@@ -92,50 +92,10 @@ TEST_F(DCDGTest, tryArxivGraphs) {
 	DynamicCommunityDetector* dynCD = new DynamicLabelPropagation(0, "Isolate");
 
 	std::vector<DynamicCommunityDetector*> targets = { dynCD };
-	DynCDSetup setup(*source, targets, 1e9, 47000);
+	DynCDSetup setup(*source, targets, 1e9, 1000);
 
 	setup.run();
 
-
-}
-
-
-TEST_F(DCDGTest, tryDynamicPubWebGeneratorAsSource) {
-	count numInitialNodes = 600;
-	count numberOfDenseAreas = 10;
-	float neighborhoodRadius = 0.125;
-	count maxNumberOfNeighbors = 16;
-	count numIterations = 10;
-
-	DynamicGraphSource* dynGen = new DynamicPubWebGenerator(numInitialNodes, numberOfDenseAreas, neighborhoodRadius, maxNumberOfNeighbors);
-
-	GraphEventProxy* Gproxy = dynGen->newGraph();
-	Graph* G = Gproxy->G;
-
-	DynamicCommunityDetector* dynCD = new DynamicLabelPropagation(0, "Reactivate");
-	dynCD->setGraph(*G);
-
-
-
-
-	Gproxy->registerObserver(dynCD);
-
-	count deltaT = 1;
-	count tMax = 10;
-
-	dynGen->initializeGraph();
-
-	std::vector<Clustering> results;
-	while (G->time() <= tMax) {
-		dynGen->generateTimeSteps(G->time() + deltaT);
-		if (G->time() % 2 == 0) {
-			results.push_back(dynCD->run());
-		}
-	}
-
-	for (Clustering zeta : results) {
-		DEBUG("number of clusters: " << zeta.numberOfClusters());
-	}
 
 }
 
@@ -370,18 +330,74 @@ TEST_F(DCDGTest, testDynamicLabelPropagation2) {
 
 }
 
-TEST_F(DCDGTest, testTDynamicLabelPropagation) {
+TEST_F(DCDGTest, testTDynamicLabelPropagationStrategyIsolate) {
 
 	DynamicCommunityDetector* dynPLP = new TDynamicLabelPropagation<Isolate>();
 	INFO("created algorithm: " << dynPLP->toString());
 
 	DynamicGraphSource* dynGen = new DynamicBarabasiAlbertGenerator(1);
 
+	std::vector<DynamicCommunityDetector*> detectors = {dynPLP};
+	DynCDSetup setup(*dynGen, detectors, 1e3, 1e2);
+
+	setup.run();
+
+	Graph G = setup.getGraphCopy();
+
+	for (std::vector<Clustering> clusteringSequence : setup.results) {
+		Clustering last = clusteringSequence.back();
+		EXPECT_TRUE(last.isProper(G)) << "final clustering in the sequence should be a proper clustering of G";
+	}
+
+
+}
+
+TEST_F(DCDGTest, testTDynamicLabelPropagationStrategyIsolateNeighbors) {
+
+	DynamicCommunityDetector* dynPLP = new TDynamicLabelPropagation<IsolateNeighbors>();
+	INFO("created algorithm: " << dynPLP->toString());
+
+	DynamicGraphSource* dynGen = new DynamicBarabasiAlbertGenerator(1);
 
 	std::vector<DynamicCommunityDetector*> detectors = {dynPLP};
 	DynCDSetup setup(*dynGen, detectors, 1e3, 1e2);
 
 	setup.run();
+
+	Graph G = setup.getGraphCopy();
+
+	for (std::vector<Clustering> clusteringSequence : setup.results) {
+		Clustering last = clusteringSequence.back();
+		EXPECT_TRUE(last.isProper(G)) << "final clustering in the sequence should be a proper clustering of G";
+	}
+
+}
+
+TEST_F(DCDGTest, testDynamicEnsembleWithTDynamicLabelPropagation) {
+	DynamicGraphSource* dynGen = new DynamicBarabasiAlbertGenerator(1);
+	DynamicCommunityDetector* dynLP1 = new TDynamicLabelPropagation<Isolate>();
+	DynamicCommunityDetector* dynLP2 = new TDynamicLabelPropagation<IsolateNeighbors>();
+	Clusterer* PLM = new Louvain();
+
+	DynamicEnsemble* ensemble = new DynamicEnsemble();
+	ensemble->addBaseAlgorithm(*dynLP1);
+	ensemble->addBaseAlgorithm(*dynLP2);
+	ensemble->setFinalAlgorithm(*PLM);
+
+	HashingOverlapper overlapAlgo;
+	ensemble->setOverlapper(overlapAlgo);
+
+	std::vector<DynamicCommunityDetector*> detectors = { ensemble };
+	DynCDSetup setup(*dynGen, detectors, 1e2, 10);
+
+	setup.run();
+
+	Graph G = setup.getGraphCopy();
+	for (std::vector<Clustering> clusteringSequence : setup.results) {
+		Clustering last = clusteringSequence.back();
+		EXPECT_TRUE(last.isProper(G)) << "final clustering in the sequence should be a proper clustering of G";
+	}
+
 
 }
 

@@ -9,33 +9,41 @@
 
 namespace NetworKit {
 
-DynamicDGSParser::DynamicDGSParser(std::string path) : graphInitialized(false), dgsFile(path) {
-	// TODO Auto-generated constructor stub
-
+DynamicDGSParser::DynamicDGSParser(std::string path) : graphInitialized(false) {
+	dgsFile.open(path.c_str(), std::ifstream::in);
 }
 
 DynamicDGSParser::~DynamicDGSParser() {
-	// TODO Auto-generated destructor stub
+
 }
 
 void DynamicDGSParser::initializeGraph() {
-	std::string line;
-
-	// handle first line
-	std::getline(dgsFile, line);
-	if (line == "DGS004") {
-		DEBUG("found magic cookie: DGS004");
-	} else {
-		throw std::runtime_error("This does not seem to be a valid DGS file. Expected magic cookie 'DGS004' in first line");
+	if (! dgsFile.is_open()) {
+		throw std::runtime_error("DGS input file could not be opened.");
 	}
+	else {
+		DEBUG("Opened DGS file");
 
-	// handle second line: optional name of file, number of clock ticks, total number of events
-	std::getline(dgsFile, line);
+		std::string line;
+		std::string cookie = "DGS004";
 
-	// Throw away the st0
-	std::getline(dgsFile, line);
+		// handle first line
+		std::getline(dgsFile, line);
+		if (!line.compare(0, cookie.size(), cookie)) { // compare prefix
+			DEBUG("found magic cookie: DGS004");
+		} else {
+			DEBUG("First line: " << line);
+			throw std::runtime_error("This does not seem to be a valid DGS file. Expected magic cookie 'DGS004' in first line");
+		}
 
-	graphInitialized = true;
+		// handle second line: optional name of file, number of clock ticks, total number of events
+		std::getline(dgsFile, line);
+
+		// Throw away the st0
+		std::getline(dgsFile, line);
+
+		graphInitialized = true;
+	}
 }
 
 void DynamicDGSParser::generate() {
@@ -43,7 +51,7 @@ void DynamicDGSParser::generate() {
 		throw std::runtime_error("Can not call generate() before graph was initialized.");
 	}
 	std::string line;
-	bool breakTimeStep; // true if breaking from the while loop was due to a time step event
+	bool breakTimeStep = false; // true if breaking from the while loop was due to a time step event
 
 	while (std::getline(dgsFile, line)) {
 		std::vector<std::string> split = Aux::StringTools::split(line);
@@ -129,5 +137,7 @@ void DynamicDGSParser::generate() {
 
 
 }
+
+
 
 } /* namespace NetworKit */

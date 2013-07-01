@@ -70,6 +70,38 @@ TEST_F(IOGTest, testMETISGraphReader) {
 	EXPECT_FALSE(G.isEmpty());
 	EXPECT_EQ(n, G.numberOfNodes()) << "There are " << n << " nodes in the  graph";
 	EXPECT_EQ(m, G.numberOfEdges()) << "There are " << m << " edges in the  graph";
+
+	for (index v = 0; v < n; ++v) {
+		EXPECT_TRUE(G.hasNode(v)) << "Node " << v << " should be there";
+	}
+
+
+	// graph polblogs (has singletons)
+	path = "input/polblogs.graph";
+	G = reader.read(path);
+	n = 1490;
+	m = 16715;
+	EXPECT_FALSE(G.isEmpty());
+	EXPECT_EQ(n, G.numberOfNodes()) << "There are " << n << " nodes in the  graph";
+	EXPECT_EQ(m, G.numberOfEdges()) << "There are " << m << " edges in the  graph";
+
+	for (index v = 0; v < n; ++v) {
+		EXPECT_TRUE(G.hasNode(v)) << "Node " << v << " should be there";
+	}
+
+
+	// graph PGPgiantcompo
+	path = "input/PGPgiantcompo.graph";
+	G = reader.read(path);
+	n = 10680;
+	m = 24316;
+	EXPECT_FALSE(G.isEmpty());
+	EXPECT_EQ(n, G.numberOfNodes()) << "There are " << n << " nodes in the  graph";
+	EXPECT_EQ(m, G.numberOfEdges()) << "There are " << m << " edges in the  graph";
+
+	for (index v = 0; v < n; ++v) {
+		EXPECT_TRUE(G.hasNode(v)) << "Node " << v << " should be there";
+	}
 }
 
 TEST_F(IOGTest, testMETISGraphReaderWithWeights) {
@@ -83,6 +115,10 @@ TEST_F(IOGTest, testMETISGraphReaderWithWeights) {
 	count m = 254;
 	EXPECT_EQ(n, G.numberOfNodes()) << "There are " << n << " nodes in the  graph";
 	EXPECT_EQ(m, G.numberOfEdges()) << "There are " << m << " edges in the  graph";
+
+	for (index v = 0; v < n; ++v) {
+		EXPECT_TRUE(G.hasNode(v)) << "Node " << v << " should be there";
+	}
 }
 
 TEST_F(IOGTest, testMETISGraphWriter) {
@@ -242,7 +278,7 @@ TEST_F(IOGTest, testMETISGraphReaderForNodeExistence2) {
 }
 
 
-TEST_F(IOGTest, testMETISGraphReaderWithIsolatedNodes) {
+TEST_F(IOGTest, tryMETISGraphReaderWithIsolatedNodes) {
 	METISGraphReader reader;
 	Graph G = reader.read("input/example.graph");
 	EXPECT_EQ(4, G.numberOfNodes());

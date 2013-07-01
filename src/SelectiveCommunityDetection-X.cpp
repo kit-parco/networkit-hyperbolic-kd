@@ -743,6 +743,11 @@ int main(int argc, char **argv) {
 		exit(1);
 	}
 	std::cout << "[BEGIN]" << std::endl;
+
+
+	assert (algo != NULL);
+
+
 	// RUN
 	Aux::Timer running;
 	for (int i = 0; i < runs; i++) {

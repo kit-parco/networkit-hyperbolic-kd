@@ -185,7 +185,7 @@ public:
 	};
 
 	inline std::string toString() const {
-		return "Isolate";
+		return "IsolateNeighbors";
 	}
 
 protected:
@@ -217,7 +217,7 @@ inline Clustering TDynamicLabelPropagation<PrepStrategy>::run() {
 		throw std::runtime_error("pointer to current graph was not initialized - call setGraph first");
 	}
 
-	INFO("running DynamicLabelPropagation at t=" << G->time());
+	INFO("running TDynamicLabelPropagation at t=" << G->time());
 
 	count nIterations = 0;
 	nUpdated = G->numberOfNodes(); // starts while loop - TODO: correct?
@@ -258,7 +258,7 @@ inline Clustering TDynamicLabelPropagation<PrepStrategy>::run() {
 
 	runtime.stop();
 	this->timerHistory.push_back(runtime.elapsed().count());
-	INFO("[DONE] LabelPropagation: iteration #" << nIterations << " - updated " << nUpdated << " labels, time spent: " << runtime.elapsedTag());
+	INFO("[DONE] iteration #" << nIterations << ", time spent: " << runtime.elapsedTag());
 
 
 	return labels;

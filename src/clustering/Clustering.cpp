@@ -64,15 +64,24 @@ bool Clustering::isProper(Graph& G) {
 }
 
 count Clustering::numberOfClusters() const {
-	count k = 0; // number of clusters
-	std::set<cluster> activeClusters;
-	for (node u = 0; u < this->n; ++u) {
-		cluster c = this->data[u];
-		if (activeClusters.find(c) == activeClusters.end()) {
+
+	count nc = this->upperBound();
+	std::vector<int> exists(nc, 0); // a boolean vector would not be thread-safe
+
+	this->parallelForEntries([&](node u, cluster C) {
+		if (C != none) {
+			exists[C] = 1;
+		}
+	});
+
+	count k = 0; // number of actually existing clusters
+	#pragma omp parallel for reduction(+:k)
+	for (index i = 0; i < nc; ++i) {
+		if (exists[i]) {
 			k++;
-			activeClusters.insert(c);
 		}
 	}
+
 	return k;
 }
 

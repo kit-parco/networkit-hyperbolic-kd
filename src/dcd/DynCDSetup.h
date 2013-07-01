@@ -12,6 +12,8 @@
 #include "../generators/DynamicGraphSource.h"
 #include "../auxiliary/Debug.h"
 #include "../community/Clusterer.h"
+#include "../clustering/Modularity.h"
+#include "../clustering/DynamicNMIDistance.h"
 
 namespace NetworKit {
 
@@ -52,6 +54,18 @@ public:
 	virtual Graph getGraphCopy();
 
 
+	/**
+	 * After calling this, the setup calculates modularity values.
+	 */
+	virtual void checkModularity();
+
+	/**
+	 * After calling this, the setup checks the number of clusters
+	 */
+	virtual void checkNumberOfCommunities();
+
+
+	virtual void checkNMIDistance();
 
 
 
@@ -68,6 +82,12 @@ public:
 
 	std::vector<std::vector<Clustering> > results; //!< the resulting communities per algorithm per run
 	std::vector<Clustering> staticClusterings; //!< if there is a static algorithm, store its results here
+
+protected:
+
+	bool checkMod = false; //!< if this is true, we check modularity
+	bool checkNumCom = false; //!< if this is true, we check the number of communities
+	bool checkNMID = false; 	//!< if this is true, we check NMIDistance between consecutive clusterings
 
 };
 

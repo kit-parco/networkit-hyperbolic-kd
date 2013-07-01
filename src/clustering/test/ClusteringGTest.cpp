@@ -253,7 +253,7 @@ TEST_F(ClusteringGTest, testModularityParallelVsSequential) {
 
 
 
-TEST_F(ClusteringGTest, tryNMIDistance) {
+TEST_F(ClusteringGTest, testNMIDistance) {
 	// two 1-clusterings should have NMID = 0 because H is 0
 	GraphGenerator gen;
 	Graph G = gen.makeErdosRenyiGraph(10, 1.0);
@@ -286,7 +286,7 @@ TEST_F(ClusteringGTest, tryNMIDistance) {
 
 }
 
-TEST_F(ClusteringGTest, tryDynamicNMIDistance) {
+TEST_F(ClusteringGTest, testDynamicNMIDistance) {
 	// two 1-clusterings should have NMID = 0 because H is 0
 	GraphGenerator gen;
 	Graph G = gen.makeErdosRenyiGraph(10, 1.0);
@@ -337,6 +337,23 @@ TEST_F(ClusteringGTest, tryDynamicNMIDistance) {
 	double distSeq = dynNMID.getDissimilarity(G, oldClustering, currentClustering);
 	INFO("Dyn NMID for last and first clustering: " << distSeq);
 
+}
+
+
+TEST_F(ClusteringGTest, testNumberOfClusters) {
+	GraphGenerator graphGenerator;
+	count n = 42;
+	count k = 4; // number of clusters
+	Graph G = graphGenerator.makeCompleteGraph(n);
+
+	ClusteringGenerator clusteringGenerator;
+	Clustering singleton = clusteringGenerator.makeSingletonClustering(G);
+	Clustering one = clusteringGenerator.makeOneClustering(G);
+	Clustering random = clusteringGenerator.makeRandomClustering(G, k);
+
+	EXPECT_EQ(n, singleton.numberOfClusters());
+	EXPECT_EQ(1, one.numberOfClusters());
+	EXPECT_EQ(k, random.numberOfClusters());
 }
 
 } /* namespace NetworKit */

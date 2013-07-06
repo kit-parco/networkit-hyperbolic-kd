@@ -17,7 +17,8 @@ AlgebraicDistance::~AlgebraicDistance() {
 }
 
 void AlgebraicDistance::preprocess() {
-
+	Aux::Timer running1;
+	running1.start();
 	// random init
 	randomInit();
 
@@ -41,6 +42,8 @@ void AlgebraicDistance::preprocess() {
 			});
 		}
 	}
+	running1.stop();
+	std::cout << running1.elapsedMilliseconds() << std::endl;
 }
 
 double AlgebraicDistance::distance(node u, node v) {
@@ -77,7 +80,7 @@ void AlgebraicDistance::randomInit() {
 
 	for (index i = 0; i < numSystems; ++i) {
 		G.forNodes([&](node v) {
-			loads[i][v] = randGen.randomFloat();
+			loads[i][v] = randGen.Aux::RandomProbability::randomFloat();
 		});
 	}
 }

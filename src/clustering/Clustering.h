@@ -230,7 +230,7 @@ public:
 	template<typename Callback> void parallelForEntries(Callback handle) const;
 
 
-	std::vector<count> clusterSizes();
+	std::vector<count> clusterSizes() const;
 
 
 	/**
@@ -242,7 +242,7 @@ public:
 	/**
 	 * Get the members of a specific cluster.
 	 */
-	std::vector<node> getMembers(cluster C);
+	std::vector<node> getMembers(const cluster C) const;
 
 
 

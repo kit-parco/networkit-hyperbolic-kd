@@ -16,6 +16,10 @@ class RcmMapper: public NetworKit::StaticMapper {
 public:
 	RcmMapper();
 	virtual ~RcmMapper();
+
+	virtual std::map<index, index> run(Graph& guest, Graph& host);
+
+	std::vector<index> permute(const Graph& graph) const;
 };
 
 } /* namespace NetworKit */

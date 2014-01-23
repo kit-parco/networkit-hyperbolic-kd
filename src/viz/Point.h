@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <sstream>
 
 namespace NetworKit {
 
@@ -56,6 +57,8 @@ public:
 	T squaredLength() const;
 
 	T& operator[](const index i);
+
+	std::string toString();
 
 	friend std::ostream& operator<< <>(std::ostream &out, Point<T>& point);
 };
@@ -150,6 +153,19 @@ std::ostream& operator <<(std::ostream& out, Point<T>& point)
 	out << ")";
 	return out;
 }
+
+template<class T>
+std::string Point<T>::toString() {
+	assert(this->data.size() > 0);
+	std::stringstream out;
+	out << "(" << (*this)[0];
+	for (index i = 1; i < this->data.size(); ++i) {
+		out << ", " << this->data[i];
+	}
+	out << ")";
+	return out.str();
+}
+
 
 } /* namespace NetworKit */
 

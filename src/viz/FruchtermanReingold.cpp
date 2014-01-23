@@ -29,9 +29,10 @@ void FruchtermanReingold::draw(Graph& g) {
 	int height = (topRight[1] - bottomLeft[1]);
 	int area = width * height;
 	count n = g.numberOfNodes();
+
 	float optPairSqrDist = OPT_PAIR_SQR_DIST_SCALE * (float) area / (float) n;
 	float optPairDist = sqrt(optPairSqrDist);
-	DEBUG("optPairDist: " << optPairDist);
+	DEBUG("optPairDist: ", optPairDist);
 
 	// initialize randomly
 	randomInitCoordinates(g);

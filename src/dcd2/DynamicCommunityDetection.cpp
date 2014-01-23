@@ -17,6 +17,7 @@
 #include "../community/PLP.h"
 #include "../community/PLM2.h"
 #include "../clustering/SampledRandMeasure.h"
+#include "../community/CommunityGraph.h"
 
 
 namespace NetworKit {
@@ -52,6 +53,8 @@ void DynamicCommunityDetection::run() {
 		algo = new StaticAdapter(new PLP());
 	} else if (algoName == "PLM") {
 		algo = new StaticAdapter(new PLM2());
+	} else {
+		throw std::runtime_error("unknown algorithm");
 	}
 
 	DEBUG("attaching graph");
@@ -155,6 +158,10 @@ void DynamicCommunityDetection::run() {
 			communitySizes.push_back(sizes);
 		}
 
+		if (record("results")) {
+			results.push_back(std::make_pair(G, zeta));
+		}
+
 
 		previous = zeta; // save last solution for next run
 
@@ -188,6 +195,10 @@ std::vector<double> DynamicCommunityDetection::getTimeline(std::string key) {
 
 std::vector<std::pair<count, count> > DynamicCommunityDetection::getGraphSizeTimeline() {
 	return size;
+}
+
+std::vector<std::pair<Graph, Clustering> > DynamicCommunityDetection::getResultTimeline() {
+	return results;
 }
 
 } /* namespace NetworKit */

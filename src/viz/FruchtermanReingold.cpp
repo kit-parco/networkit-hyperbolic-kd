@@ -13,7 +13,7 @@ const float FruchtermanReingold::INITIAL_STEP_LENGTH = 1.0;
 const float FruchtermanReingold::OPT_PAIR_SQR_DIST_SCALE = 0.35;
 
 
-FruchtermanReingold::FruchtermanReingold(Point<float> bottom_left, Point<float> top_right, count maxIterations, float precision, bool useGivenCoordinates):
+FruchtermanReingold::FruchtermanReingold(Point<float> bottom_left, Point<float> top_right, bool useGivenCoordinates, count maxIterations, float precision):
 		Layouter(bottom_left, top_right), maxIter(maxIterations), prec(precision), step(INITIAL_STEP_LENGTH), initNecessary(! useGivenCoordinates)
 {
 
@@ -102,9 +102,8 @@ void FruchtermanReingold::draw(Graph& g) {
 		float change = 0.0;
 
 		for (index i = 0; i < oldLayout.size(); ++i) {
-			change += oldLayout[i].distance(newLayout[i]);
+			change += oldLayout[i].distance(newLayout[i]); // could be accelerated by squared distance
 		}
-//		change = sqrt(change);
 		DEBUG("change: ", change);
 
 		return (change < prec);

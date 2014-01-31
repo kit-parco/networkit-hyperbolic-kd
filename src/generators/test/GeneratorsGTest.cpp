@@ -10,6 +10,7 @@ Dy * GeneratorsTest.cpp
 #include "GeneratorsGTest.h"
 
 #include "../DynamicPathGenerator.h"
+#include "../ForestFireGenerator.h"
 
 namespace NetworKit {
 
@@ -285,7 +286,6 @@ TEST_F(GeneratorsGTest, tryHavelHakimiGeneratorOnRandomSequence) {
 	} while (! realizable);
 }
 
-
 TEST_F(GeneratorsGTest, tryHavelHakimiGeneratorOnRealSequence) {
 	METISGraphReader reader;
 	Graph G = reader.read("input/astro-ph.graph");
@@ -299,6 +299,11 @@ TEST_F(GeneratorsGTest, tryHavelHakimiGeneratorOnRealSequence) {
 	EXPECT_EQ(volume, 2 * G2.numberOfEdges());
 }
 
+
+TEST_F(GeneratorsGTest, testForestFireGenerator) {
+	ForestFireGenerator ffg(0.5);
+	ffg.generate(10);
+}
 
 } /* namespace NetworKit */
 

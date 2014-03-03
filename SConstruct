@@ -5,7 +5,7 @@ import ConfigParser
 home_path = os.environ['HOME']
 
 # SOURCE files (including executable) will be gathered here
-srcDir = "src"
+srcDir = "src/cpp"
 def getSourceFiles(target, optimize):
 	source = []
 
@@ -29,7 +29,7 @@ def getSourceFiles(target, optimize):
 		for name in fnmatch.filter(source, pattern):
 			excluded.append(name)
 
-	print("excluded source files: {0}".format(excluded))
+	#print("excluded source files: {0}".format(excluded))
 	source = [name for name in source if name not in excluded]
 
 	# add executable
@@ -50,7 +50,7 @@ def getSourceFiles(target, optimize):
 
 	# modify source paths for build directory
 	source = [name.replace(srcDir + "/", buildDir + "/") for name in source]
-	print(source)
+	#print(source)
 	return source
 
 
@@ -61,7 +61,9 @@ def getSourceFiles(target, optimize):
 env = Environment()
 confPath = "build.conf"
 if not os.path.isfile(confPath):
-	raise IOError("The configuration file `build.conf` does not exist. You need to create it.")
+	print("The configuration file `build.conf` does not exist. You need to create it.")
+	print("Use the file build.conf.example to create your build.conf")
+	Exit(1)
 
 conf = ConfigParser.ConfigParser()
 conf.read([confPath])     # read the configuration file

@@ -14,6 +14,8 @@
 #include "../graph/SSSP.h"
 
 #include <math.h>
+#include <algorithm>
+#include <omp.h>
 
 namespace NetworKit {
 
@@ -23,20 +25,30 @@ ApproxBetweenness::ApproxBetweenness(const Graph& G, double epsilon, double delt
 
 
 void ApproxBetweenness::run() {
-	count z = G.upperNodeIdBound();
 	scoreData.clear();
-	scoreData.resize(z);
+	scoreData.resize(G.upperNodeIdBound());
 
 	double c = 1; // TODO: what is c?
 
 	INFO("estimating vertex diameter");
 	count vd = Diameter::estimatedVertexDiameter(G);
-	double r = (c / (epsilon * epsilon)) * (floor(log(vd - 2))) + log(1 / delta);
+	INFO("estimated diameter: ", vd);
+	count r = ceil((c / (epsilon * epsilon)) * (floor(log(vd - 2))) + log(1 / delta));
+
 
 	// double r = (c / (epsilon * epsilon)) * (3 + log(1 / delta));
 
 	INFO("taking ", r, " path samples");
-	for (count i = 1; i <= r; ++i) {
+
+	// parallelization: 
+	count maxThreads = omp_get_max_threads();
+	DEBUG("max threads: ", maxThreads);
+	std::vector<std::vector<double> > scorePerThread(maxThreads, std::vector<double>(G.upperNodeIdBound()));
+	DEBUG("score per thread size: ", scorePerThread.size());
+
+	#pragma omp parallel for
+	for (count i = 1; i <= r; i++) {
+		count thread = omp_get_thread_num();
 		DEBUG("sample ", i);
 		// if (i >= 1000) throw std::runtime_error("too many iterations");
 		// DEBUG
@@ -69,8 +81,9 @@ void ApproxBetweenness::run() {
 					choices.emplace_back(z, sssp->numberOfPaths(z) / (double) sssp->numberOfPaths(s)); 	// sigma_uz / sigma_us
 				}
 				node z = Aux::Random::weightedChoice(choices);
+				assert (z <= G.upperNodeIdBound());
 				if (z != u) {
-					scoreData[z] = scoreData[z] + 1 / (double) r;
+					scorePerThread[thread][z] += 1 / (double) r;
 				}
 				s = t;
 				t = z;
@@ -78,6 +91,14 @@ void ApproxBetweenness::run() {
 		}
 
 		delete sssp; // free heap memory
+	}
+
+	INFO("adding thread-local scores");
+	// add up all thread-local values
+	for (auto local : scorePerThread) {
+		G.parallelForNodes([&](node v){
+			scoreData[v] += local[v];
+		});
 	}
 
 }

@@ -11,6 +11,7 @@
 #include "../EigenvectorCentrality.h"
 #include "../PageRank.h"
 #include "../../io/METISGraphReader.h"
+#include "../../io/FastMETISGraphReader.h"
 
 namespace NetworKit {
 
@@ -233,7 +234,5 @@ TEST_F(CentralityGTest, benchPageRankCentralityOnRealGraph) {
 	std::vector<std::pair<node, double> > ranking = cen.ranking();
 	INFO("Highest rank: ", ranking[0].first, " with score ", ranking[0].second);
 }
-
-
 
 } /* namespace NetworKit */

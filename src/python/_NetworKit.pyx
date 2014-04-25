@@ -556,7 +556,8 @@ cdef extern from "../cpp/io/METISGraphReader.h":
 		_Graph* readToHeap(string path) except +
 
 cdef class METISGraphReader:
-	""" Reads the METIS adjacency file format [1]
+	""" Reads the METIS adjacency file format [1]. If the Fast reader fails, 
+		use readGraph(path, graphio.formats.metis) as an alternative.
 		[1]: http://people.sc.fsu.edu/~jburkardt/data/metis_graph/metis_graph.html
 	"""
 	cdef _METISGraphReader _this
@@ -572,8 +573,8 @@ cdef extern from "../cpp/io/FastMETISGraphReader.h":
 		_Graph* _read(string path) except +
 
 cdef class FastMETISGraphReader:
-	""" A faster but currently experimental implementation of a reader for
-		the METIS format.
+	""" A faster but still experimental implementation of a reader for
+		the METIS format. It is the default of the readGraph-function.
 	"""
 	cdef _FastMETISGraphReader _this
 	

@@ -1,11 +1,15 @@
-from _NetworKit import (Graph, METISGraphReader, FastMETISGraphReader, METISGraphWriter, DotGraphWriter, EdgeListIO, \
+from _NetworKit import (Graph, METISGraphReader, METISGraphWriter, DotGraphWriter, EdgeListIO, \
 						 VNAGraphWriter, GMLGraphWriter, LineFileReader, SNAPGraphWriter, ClusteringReader, ClusteringWriter, DGSWriter, \
-						  DGSStreamParser, GraphUpdater)
+						  DGSStreamParser, GraphUpdater, FastMETISGraphReader)
 
 import os
 import logging
+import numpy
+import scipy.io
+
 class formats:
 	metis = "metis"
+	fastmetis = "fastmetis"
 	#CLUSTERING = "clustering"
 	edgelist_tab_one = "edgelist-t1"
 	edgelist_tab_zero = "edgelist-t0"
@@ -23,10 +27,13 @@ class formats:
 		snap = "snap"
 		vna = "vna"
 
-def readGraph(path, format="metis", **kwargs):
+# reading
+
+def readGraph(path, format="fastmetis", **kwargs):
 	"""    Read graph file in various formats and return a NetworKit::Graph"""
 	
 	readers =  {"metis": METISGraphReader(),
+			"fastmetis" : FastMETISGraphReader(),
 				#"edgelist": EdgeListIO(),
 				"edgelist-t1" : EdgeListIO('\t', 1),
 				"edgelist-t0": EdgeListIO('\t', 0),
@@ -52,6 +59,29 @@ def readGraph(path, format="metis", **kwargs):
 
 	return None
 
+
+def readMat(path):
+	""" Reads a Graph from a matlab object file containing an adjacency matrix"""
+	matlabObject = scipy.io.loadmat(path)	
+	# result is a dictionary of variable names and objects, representing the matlab object
+	for (key, value) in matlabObject.items():
+		if type(matlabObject[key]) is numpy.ndarray:
+			A = matlabObject[key]
+			break # found the matrix
+			
+	(n, n2) = A.shape
+	if (n != n2):
+		raise Exception("this (%sx%s) matrix is not square".format(n, n2))
+	if not ((A.transpose() == A).all()):
+		logging.warning("the adjacency matrix is not symmetric")
+	G = Graph(n)
+	nz = A.nonzero()
+	edges = [(u,v) for (u,v) in zip(nz[0], nz[1])]
+	for (u,v) in edges:
+		G.addEdge(u, v)
+	return G
+
+# writing
 
 def writeGraph(G, path, format="metis"):
 	""" Write graph to various output formats """

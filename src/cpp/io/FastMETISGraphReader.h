@@ -1,25 +1,25 @@
 /*
  * FastMETISGraphReader.h
  *
- *  Created on: 04.10.2013
- *      Author: cls
+ *  Created on: 24.04.2014
+ *      Author: Maximilian Vogel
  */
 
 #ifndef FASTMETISGRAPHREADER_H_
 #define FASTMETISGRAPHREADER_H_
 
-#include <fstream>
-
 #include "GraphReader.h"
-#include "FastMETISParser.h"
+#include "../graph/Graph.h"
+#include "../auxiliary/StringTools.h"
 
 namespace NetworKit {
 
-class FastMETISGraphReader: public NetworKit::GraphReader {
+class FastMETISGraphReader : public NetworKit::GraphReader {
 public:
 	FastMETISGraphReader();
 	virtual ~FastMETISGraphReader();
-	virtual Graph read(std::string path);
+
+	virtual Graph read(const std::string path);
 };
 
 } /* namespace NetworKit */

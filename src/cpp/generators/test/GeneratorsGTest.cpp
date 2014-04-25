@@ -11,16 +11,19 @@ Dy * GeneratorsTest.cpp
 
 #include "../DynamicPathGenerator.h"
 #include "../ForestFireGenerator.h"
+#include "../../properties/ClusteringCoefficient.h"
+#include "../../community/PLM.h"
+#include "../../community/Modularity.h"
+
 
 namespace NetworKit {
 
 GeneratorsGTest::GeneratorsGTest() {
-	// TODO Auto-generated constructor stub
 
 }
 
 GeneratorsGTest::~GeneratorsGTest() {
-	// TODO Auto-generated destructor stub
+
 }
 
 
@@ -116,14 +119,14 @@ TEST_F(GeneratorsGTest, testStaticPubWebGenerator) {
 	EXPECT_EQ(G.numberOfNodes(),oneClustering.numberOfElements());
 
 	// output to EPS file
-	PostscriptWriter psWriter(G, true);
-	psWriter.write(oneClustering, "output/pubweb.eps");
+	PostscriptWriter psWriter(true);
+	psWriter.write(G, oneClustering, "output/pubweb.eps");
 
 	// clustering
 	PLM clusterAlgo;
 	Partition clustering = clusterAlgo.run(G);
 	EXPECT_EQ(G.numberOfNodes(),clustering.numberOfElements());
-	psWriter.write(clustering, "output/pubweb-clustered-PLM.eps");
+	psWriter.write(G, clustering, "output/pubweb-clustered-PLM.eps");
 
 	Modularity mod;
 	double modVal = mod.getQuality(clustering, G);
@@ -148,8 +151,8 @@ TEST_F(GeneratorsGTest, testDynamicPubWebGenerator) {
 	std::vector<GraphEvent> stream;
 
 	// static clustering algorithm for better visual output
-	PostscriptWriter psWriter(G, true);
-	psWriter.write("output/pubweb-0000.eps");
+	PostscriptWriter psWriter(true);
+	psWriter.write(G, "output/pubweb-0000.eps");
 
 	for (index i = 1; i <= nSteps; ++i) {
 		stream = dynGen.generate(1);
@@ -171,12 +174,11 @@ TEST_F(GeneratorsGTest, testDynamicPubWebGenerator) {
 			G.setCoordinate(v, p);
 		}
 
-		// output in clustered way for better visual inspection
+		// output for visual inspection
 		char path[23];
-		sprintf(path, "output/pubweb-%04llu.eps", i);
+		sprintf(path, "output/pubweb-%04llu.eps", static_cast<unsigned long long>(i));
 		TRACE("path: " , path);
-		PostscriptWriter psWriter(G, true);
-		psWriter.write(path);
+		psWriter.write(G, path);
 	}
 }
 
@@ -239,6 +241,34 @@ TEST_F(GeneratorsGTest, testErdosRenyiGenerator) {
 
 	DEBUG("Number of edges with probability " , p , " (actual/expected): " , nEdges , " / " , (nPairs * p));
 }
+
+TEST_F(GeneratorsGTest, testRmatGenerator) {
+	count scale = 9;
+	count n = (1 << scale);
+	count edgeFactor = 12;
+	double a = 0.51;
+	double b = 0.12;
+	double c = 0.12;
+	double d = 0.2;
+
+	RmatGenerator rmat(scale, edgeFactor, a, b, c, d);
+	Graph G = rmat.generate();
+
+	EXPECT_EQ(G.numberOfNodes(), n);
+	EXPECT_LE(G.numberOfEdges(), n * edgeFactor);
+
+	ClusteringCoefficient cc;
+	double ccex = cc.exactGlobal(G);
+	EXPECT_LE(ccex, 0.4);
+
+	PLM clusterer(true);
+	Partition zeta = clusterer.run(G);
+	Modularity mod;
+	double modVal = mod.getQuality(zeta, G);
+	INFO("Modularity of R-MAT graph clustering: ", modVal);
+	EXPECT_GE(modVal, 0.0);
+}
+
 
 TEST_F(GeneratorsGTest, testChungLuGenerator) {
 	count n = 400;

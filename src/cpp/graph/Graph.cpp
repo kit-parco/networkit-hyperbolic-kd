@@ -6,6 +6,8 @@
 
 #include "Graph.h"
 
+#include "../auxiliary/Random.h"
+
 namespace NetworKit {
 
 
@@ -17,10 +19,6 @@ Graph::Graph(count n, bool weighted) : n(n), m(0), z(n), t(0), weighted(weighted
 	std::stringstream sstm;
 	sstm << "G#" << graphId++;
 	this->name = sstm.str();
-}
-
-Graph::~Graph() {
-
 }
 
 
@@ -409,6 +407,15 @@ index Graph::argmaxDegree() const {
 	});
 
 	return argmax;
+}
+
+node Graph::randomNode() const {
+	assert (this->numberOfNodes() > 0);
+	node u;
+	do {
+		u = Aux::Random::integer(z);
+	} while (! this->hasNode(u));
+	return u;
 }
 
 

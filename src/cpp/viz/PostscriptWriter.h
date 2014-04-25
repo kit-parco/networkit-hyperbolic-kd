@@ -24,8 +24,7 @@
 namespace NetworKit {
 
 /**
- * TODO: class documentation
- * TODO: decouple coordinates used here from those in graph
+ * EPS output of graphs with 2D coordinates
  */
 class PostscriptWriter {
 
@@ -36,36 +35,45 @@ class PostscriptWriter {
 	};
 
 protected:
-	Graph g;
 	bool wrapAround;
 
 	count numColors;
 	std::vector<float_triple> psColor;
 
-	float ps_sizex = 1020.0;
-	float ps_sizey = 1020.0;
-	float ps_borderx = 10.0;
-	float ps_bordery = 10.0;
-
-	float ps_scale;
-	float ps_minx;
-	float ps_maxx;
-	float ps_miny;
-	float ps_maxy;
-	float ps_minz;
-	float ps_maxz;
+	Point<float> ps_size;
+	Point<float> ps_border;
+	Point<float> ps_min;
+	Point<float> ps_max;
 
 	void init(std::string filename, std::ofstream& file);
 	void writeHeader(std::ofstream& file);
 	void writeMacros(std::ofstream& file);
-	void writeClustering(Partition& clustering, std::ofstream& file);
+	void writeClustering(Graph& g, Partition& clustering, std::ofstream& file);
 
 public:
-	PostscriptWriter(const Graph& graph, bool isTorus = false);
+	/**
+	 * @param[in] isTorus Specifies whether the visualization square is treated as torus,
+	 * i.e. with wrap-around boundaries (edge can leave the square and enter at the opposite
+	 * side. By default, it is set to false.
+	 */
+	PostscriptWriter(bool isTorus = false);
 	~PostscriptWriter();
 
-	void write(Partition& clustering, std::string filename);
-	void write(std::string filename);
+	/**
+	 * Outputs an EPS file with name @a filename of the graph @a g with 2D coordinates.
+	 * The colors are chosen to visualize the specified @a clustering.
+	 * @param[in] g Graph to be visualized.
+	 * @param[in] clustering Clustering of the graph, visualized by different colors.
+	 * @param[in] filename Name of file to write to.
+	 */
+	void write(Graph& g, Partition& clustering, std::string filename);
+
+	/**
+	 * Outputs an EPS file with name @a filename of the graph @a g with 2D coordinates.
+	 * @param[in] g Graph to be visualized.
+	 * @param[in] filename Name of file to write to.
+	 */
+	void write(Graph& g, std::string filename);
 };
 
 } /* namespace NetworKit */

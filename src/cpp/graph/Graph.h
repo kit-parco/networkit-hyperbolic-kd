@@ -14,6 +14,7 @@
 #include <cinttypes>
 #include <string>
 #include <queue>
+#include <stack>
 #include <stdexcept>
 #include <map>
 #include <set>
@@ -25,8 +26,6 @@
 
 #include "Coordinates.h"
 #include "../auxiliary/Log.h"
-#include "../auxiliary/Debug.h"
-#include "../auxiliary/PriorityQueue.h"
 #include "../Globals.h"
 #include "../viz/Point.h"
 
@@ -48,7 +47,7 @@ template <typename T> using Vector = std::vector<T>;
 /**
  * An undirected graph (with optional weights) and parallel iterator methods.
  */
-class Graph {
+class Graph final {
 
 protected:
 
@@ -115,7 +114,7 @@ public:
 
 	Graph(Graph&& other) = default;
 
-	virtual ~Graph();
+	~Graph() = default;
 
 	Graph& operator=(Graph&& other) = default;
 
@@ -212,6 +211,10 @@ public:
 	 * weighted degree with self-loops counted twice.
 	 */
 	edgeweight volume(node v) const;
+
+
+	/** @return random node from G */
+	node randomNode() const;
 
 	/**
 	 * @return Random (uuid) neighbor of @a v. None if degree is zero.
@@ -463,6 +466,11 @@ public:
 	 */
 	template<typename L> void breadthFirstNodesFrom(node r,
 			std::vector<int>& marked, L handle);
+
+
+	template<typename L> void BFSfrom(node r, L handle);
+
+	template<typename L> void DFSfrom(node r, L handle);
 
 	/**
 	 * Iterate over edges in breadth-first search order starting from node r until connected component
@@ -1222,6 +1230,49 @@ void NetworKit::Graph::forNodesInRandomOrder(L handle) const {
 		}
 	}
 }
+
+
+template<typename L>
+void NetworKit::Graph::BFSfrom(node r, L handle) {
+	std::vector<bool> marked(z);
+	std::queue<node> q;
+	q.push(r); // enqueue root
+	marked[r] = true;
+	do {
+		node u = q.front();
+		q.pop();
+		// apply function
+		handle(u);
+		this->forNeighborsOf(u, [&](node v) {
+			if (!marked[v]) {
+				q.push(v);
+				marked[v] = true;
+			}
+		});
+	} while (!q.empty());
+};
+
+
+template<typename L>
+void NetworKit::Graph::DFSfrom(node r, L handle) {
+	std::vector<bool> marked(z);
+	std::stack<node> stack;
+	stack.push(r); // enqueue root
+	marked[r] = true;
+	do {
+		node u = stack.top();
+		stack.pop();
+		// apply function
+		handle(u);
+		this->forNeighborsOf(u, [&](node v) {
+			if (!marked[v]) {
+				stack.push(v);
+				marked[v] = true;
+			}
+		});
+	} while (!stack.empty());
+};
+
 
 
 #endif /* GRAPH_H_ */

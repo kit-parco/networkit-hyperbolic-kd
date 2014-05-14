@@ -33,6 +33,11 @@ public:
 	/** NODE PROPERTIES **/
 
 	/**
+	 * @return true if the node is isolated (= degree is 0)
+	 */
+	bool isIsolated(node v) const { return degreeIn(v) == 0 && degreeOut(v) == 0; }
+
+	/**
 	 * Return the number of neighbors for node v. For a Directed Graph return the number of outgoing neighbors for node v.
 	 */
 	virtual count degree(node v) const { return degreeOut(v); }
@@ -63,17 +68,7 @@ public:
 	/**
 	 * Iterate over all Outgoing edges of the graph and call handler (lambda closure).
 	 */
-	template<typename L> void forOutEdgesOf(node u, L handle) {}
-
-	/**
-	 * Iterate over all Outgoing edges of the graph and call handler (lambda closure).
-	 */
 	template<typename L> void forOutEdgesOf(node u, L handle) const {}
-
-	/**
-	 * Iterate over all Incoming edges of the graph and call handler (lambda closure).
-	 */
-	template<typename L> void forInEdgesOf(node u, L handle) {}
 	
 	/**
 	 * Iterate over all Incoming edges of the graph and call handler (lambda closure).
@@ -83,23 +78,12 @@ public:
 	/**
 	 * Iterate over all adjacent nodes, which are adjacent to an inedge of u
 	 */
-	template<typename L> void forOutNeighborsOf(node u, L handle) {}
-
-	/**
-	 * Iterate over all adjacent nodes, which are adjacent to an inedge of u
-	 */
 	template<typename L> void forOutNeighborsOf(node u, L handle) const {}
 
 	/**
 	 * Iterate over all adjacent nodes, which are adjacent to an outedge of u
 	 */
-	template<typename L> void forInNeighborsOf(node u, L handle) {}
-	
-	/**
-	 * Iterate over all adjacent nodes, which are adjacent to an outedge of u
-	 */
-	template<typename L> void forInNeighborsOf(node u, L handle) const;
-
+	template<typename L> void forInNeighborsOf(node u, L handle) const {}
 };
 } /* namespace NetworKit */
 

@@ -5,14 +5,18 @@
  *      Author: Christian Staudt (christian.staudt@kit.edu), Henning Meyerhenke (henning.meyerhenke@kit.edu)
  */
 
-// #include "BasicGraph.h"
-// #define GRAPH_H_
+#include "BasicGraph.h"
+namespace NetworKit {
+	using Graph = Graph_T;
+}
+#define GRAPH_H_
 
 #ifndef GRAPH_H_
 #define GRAPH_H_
 
 #include <vector>
 #include <algorithm>
+#include <stdexcept>
 
 #include "AbstractGraph.h"
 #include "Coordinates.h"
@@ -46,17 +50,6 @@ protected:
 
 public:
 
-	/** ATTRIBUTE ABSTRACT BASE CLASSES **/
-
-	// class NodeAttribute {
-	// 	// abstract
-	// };
-
-	// class EdgeAttribute {
-	// 	// abstract
-	// };
-
-
 	/** GRAPH INTERFACE **/
 
 	/** 
@@ -64,16 +57,11 @@ public:
 	 */
 	Graph(count n = 0, bool weighted = false);
 
-	Graph(const Graph& other) = default;
-
-	Graph(Graph&& other) = default;
-
-	virtual ~Graph();
-
-	Graph& operator=(Graph&& other) = default;
-
-	Graph& operator=(const Graph& other) = default;
-
+	/* move assignments and more currently removed because a problems with gcc 4.7.1 on phipute1 */
+	// Graph(const Graph& other) = default;
+	// Graph(Graph&& other) = default;
+	// Graph& operator=(Graph&& other) = default;
+	// Graph& operator=(const Graph& other) = default;
 
 	/**
 	 * Calculate an approximation of the memory used by this graph. Only memory increasing with the
@@ -222,73 +210,71 @@ public:
 	/** EDGE ITERATORS **/
 
 	/**
-	 * Iterate over all edges of the graph and call handler (lambda closure).
+	 * Iterate over all edges of the graph and call f (lambda closure).
 	 */
-	// template<typename L> void forEdges(L handle) const;
 	void forEdges(FEdge f) const;
 
 	/**
-	 * Iterate in parallel over all edges of the graph and call handler (lambda closure).
+	 * Iterate in parallel over all edges of the graph and call f (lambda closure).
 	 */
-	template<typename L> void parallelForEdges(L handle) const;
+	virtual void parallelForEdges(FEdge f) const;
 
 	/**
-	 * Iterate over all edges of the graph and call handler (lambda closure).
+	 * Iterate over all edges of the graph and call f (lambda closure).
 	 *
 	 * Handler takes arguments (u, v, w) where u and v are the nodes of the edge and w is its weight.
 	 */
-	template<typename L> void forWeightedEdges(L handle) const;
+	virtual void forWeightedEdges(FEdgeWeighted f) const;
 
 	/**
-	 * Iterate over all edges of the graph and call handler (lambda closure).
+	 * Iterate over all edges of the graph and call f (lambda closure).
 	 *
 	 * Handler takes arguments (u, v, w) where u and v are the nodes of the edge and w is its weight.
 	 */
-	template<typename L> void parallelForWeightedEdges(L handle) const;
+	virtual void parallelForWeightedEdges(FEdgeWeighted f) const;
 
 	/**
-	 * Iterate over all edges of the const graph and call handler (lambda closure).
+	 * Iterate over all edges of the const graph and call f (lambda closure).
 	 *
 	 *	@param[in]	attrId		attribute id
-	 *	@param[in]	handle 		takes arguments (u, v, a) where a is an edge attribute of edge {u, v}
+	 *	@param[in]	f 		takes arguments (u, v, a) where a is an edge attribute of edge {u, v}
 	 *
 	 */
-	template<typename L> void forEdgesWithAttribute_double(int attrId, L handle) const;
+	virtual void forEdgesWithAttribute_double(int attrId, FEdgeWeighted f) const;
 
 
 	/** NEIGHBORHOOD ITERATORS **/
 
 	/**
-	 * Iterate over all neighbors of a node and call handler (lamdba closure).
+	 * Iterate over all neighbors of a node and call f (lamdba closure).
 	 */
-	// template<typename L> void forNeighborsOf(node u, L handle) const;
 	void forNeighborsOf(node u, FNode f) const;
 
 	/**
-	 * Iterate over all edge weights of a node and call handler (lamdba closure).
+	 * Iterate over all edge weights of a node and call f (lamdba closure).
 	 */
-	template<typename L> void forWeightedNeighborsOf(node u, L handle) const;
+	virtual void forWeightedNeighborsOf(node u, FNodeWeighted f) const;
 
 	/**
-	 * Iterate over all incident edges of a node and call handler (lamdba closure).
+	 * Iterate over all incident edges of a node and call f (lamdba closure).
 	 */
-	template<typename L> void forEdgesOf(node u, L handle) const;
+	virtual void forEdgesOf(node u, FEdge f) const;
 
 	/**
-	 * Iterate over all incident edges of a node and call handler (lamdba closure).
+	 * Iterate over all incident edges of a node and call f (lamdba closure).
 	 *
 	 * Handle takes parameters (u, v, w) where w is the edge weight.
 	 *
 	 */
-	template<typename L> void forWeightedEdgesOf(node u, L handle) const;
+	virtual void forWeightedEdgesOf(node u, FEdgeWeighted f) const;
 
 
 	/** REDUCTION ITERATORS **/
 
 	/**
-	 * Iterate in parallel over all edges and sum (reduce +) the values returned by the handler
+	 * Iterate in parallel over all edges and sum (reduce +) the values returned by the f
 	 */
-	template<typename L> double parallelSumForWeightedEdges(L handle) const;
+	virtual double parallelSumForWeightedEdges(FEdgeWeightedSum f) const;
 
 };
 
@@ -297,9 +283,7 @@ public:
 
 /** EDGE ITERATORS **/
 
-// template<typename L>
-// inline void NetworKit::Graph::forEdges(L handle) const {
-inline void NetworKit::Graph::forEdges(FEdge f) const {
+inline void NetworKit::Graph::forEdges(NetworKit::FEdge f) const {
 	for (node u = 0; u < z; ++u) {
 		for (node v : this->adja[u]) {
 			if (u >= v) { // {u, v} instead of (u, v); if v == none, u > v is not fulfilled
@@ -309,38 +293,35 @@ inline void NetworKit::Graph::forEdges(FEdge f) const {
 	}
 }
 
-template<typename L>
-inline void NetworKit::Graph::parallelForEdges(L handle) const {
+inline void NetworKit::Graph::parallelForEdges(NetworKit::FEdge f) const {
 	#pragma omp parallel for
 	for (node u = 0; u < z; ++u) {
 		for (node v : this->adja[u]) {
 			if (u >= v) { // {u, v} instead of (u, v); if v == none, u > v is not fulfilled
-				handle(u, v);
+				f(u, v);
 			}
 		}
 	}
 }
 
 
-template<typename L>
-inline void NetworKit::Graph::forWeightedEdges(L handle) const {
+inline void NetworKit::Graph::forWeightedEdges(NetworKit::FEdgeWeighted f) const {
 	for (node u = 0; u < z; ++u) {
 		for (index vi = 0; vi < adja[u].size(); ++vi) {
 			node v = this->adja[u][vi];
 			if (u >= v) { // {u, v} instead of (u, v); if v == none, u > v is not fulfilled
 				if (weighted) {
 					edgeweight w = this->eweights[u][vi];
-					handle(u, v, w);
+					f(u, v, w);
 				} else {
-					handle(u, v, defaultEdgeWeight);
+					f(u, v, defaultEdgeWeight);
 				}
 			}
 		}
 	}
 }
 
-template<typename L>
-inline void NetworKit::Graph::parallelForWeightedEdges(L handle) const {
+inline void NetworKit::Graph::parallelForWeightedEdges(NetworKit::FEdgeWeighted f) const {
 	#pragma omp parallel for
 	for (node u = 0; u < z; ++u) {
 		for (index vi = 0; vi < adja[u].size(); ++vi) {
@@ -348,24 +329,23 @@ inline void NetworKit::Graph::parallelForWeightedEdges(L handle) const {
 			if (u >= v) { // {u, v} instead of (u, v); if v == none, u > v is not fulfilled
 				if (weighted) {
 					edgeweight w = this->eweights[u][vi];
-					handle(u, v, w);
+					f(u, v, w);
 				} else {
-					handle(u, v, defaultEdgeWeight);
+					f(u, v, defaultEdgeWeight);
 				}
 			}
 		}
 	}
 }
 
-template<typename L>
-inline void NetworKit::Graph::forEdgesWithAttribute_double(int attrId, L handle) const {
+inline void NetworKit::Graph::forEdgesWithAttribute_double(int attrId, NetworKit::FEdgeWeighted f) const {
 	std::vector<std::vector<double> > edgeMap = this->edgeMaps_double[attrId];
 	for (node u = 0; u < z; ++u) {
 		for (index vi = 0; vi < (index) adja[u].size(); ++vi) {
 			node v = this->adja[u][vi];
 			double attr = edgeMap[u][vi];
 			if (u >= v) { // {u, v} instead of (u, v); if v == none, u > v is not fulfilled
-				handle(u, v, attr);
+				f(u, v, attr);
 			}
 		}
 	}
@@ -374,9 +354,7 @@ inline void NetworKit::Graph::forEdgesWithAttribute_double(int attrId, L handle)
 
 /** NEIGHBORHOOD ITERATORS **/
 
-// template<typename L>
-// inline void NetworKit::Graph::forNeighborsOf(node u, L handle) const {
-inline void NetworKit::Graph::forNeighborsOf(node u, FNode f) const {
+inline void NetworKit::Graph::forNeighborsOf(node u, NetworKit::FNode f) const {
 	for (node v : this->adja[u]) {
 		if (v != none) {
 			f(v);
@@ -384,14 +362,13 @@ inline void NetworKit::Graph::forNeighborsOf(node u, FNode f) const {
 	}
 }
 
-template<typename L>
-inline void NetworKit::Graph::forWeightedNeighborsOf(node u, L handle) const {
+inline void NetworKit::Graph::forWeightedNeighborsOf(node u, NetworKit::FNodeWeighted f) const {
 	if (weighted) {
 		for (index i = 0; i < (index) adja[u].size(); i++) {
 			node v = adja[u][i];
 			if (v != none) {
 				edgeweight ew = eweights[u][i];
-				handle(v, ew);
+				f(v, ew);
 				assert(ew == weight(u, v));
 			}
 		}
@@ -399,31 +376,29 @@ inline void NetworKit::Graph::forWeightedNeighborsOf(node u, L handle) const {
 		for (index i = 0; i < (index) adja[u].size(); i++) {
 			node v = adja[u][i];
 			if (v != none) {
-				handle(v, defaultEdgeWeight);
+				f(v, defaultEdgeWeight);
 			}
 		}
 	}
 }
 
-template<typename L>
-inline void NetworKit::Graph::forEdgesOf(node u, L handle) const {
+inline void NetworKit::Graph::forEdgesOf(node u, NetworKit::FEdge f) const {
 	for (node v : this->adja[u]) {
 		if (v != none) {
-			handle(u, v);
+			f(u, v);
 		}
 	}
 }
 
-template<typename L>
-inline void NetworKit::Graph::forWeightedEdgesOf(node u, L handle) const {
+inline void NetworKit::Graph::forWeightedEdgesOf(node u, NetworKit::FEdgeWeighted f) const {
 	for (index i = 0; i < adja[u].size(); ++i) {
 		node v = adja[u][i];
 		if (v != none) {
 			if (weighted) {
 				edgeweight w = this->eweights[u][i];
-				handle(u, v, w);
+				f(u, v, w);
 			} else {
-				handle(u, v, defaultEdgeWeight);
+				f(u, v, defaultEdgeWeight);
 			}
 		}
 	}
@@ -431,8 +406,7 @@ inline void NetworKit::Graph::forWeightedEdgesOf(node u, L handle) const {
 
 /** REDUCTION ITERATORS **/
 
-template<typename L>
-double NetworKit::Graph::parallelSumForWeightedEdges(L handle) const {
+inline double NetworKit::Graph::parallelSumForWeightedEdges(NetworKit::FEdgeWeightedSum f) const {
 	double sum = 0.0;
 	#pragma omp parallel for reduction(+:sum)
 	for (node u = 0; u < z; ++u) {
@@ -440,7 +414,7 @@ double NetworKit::Graph::parallelSumForWeightedEdges(L handle) const {
 			node v = this->adja[u][i];
 			edgeweight ew = this->eweights[u][i];
 			if (u >= v) { // {u, v} instead of (u, v); if v == none, u > v is not fulfilled
-				sum += handle(u, v, ew);
+				sum += f(u, v, ew);
 			}
 		}
 	}

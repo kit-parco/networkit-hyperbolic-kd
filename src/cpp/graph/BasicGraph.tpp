@@ -21,7 +21,7 @@ namespace graph_impl {
 /** CONSTRUCTORS **/
 
 template<Weighted w, Directed d>
-BasicGraph<w, d>::BasicGraph(count n) :
+BasicGraph<w, d>::BasicGraph(count n, bool dummy) :
 	DData(n),
 	n(n),
 	m(0),

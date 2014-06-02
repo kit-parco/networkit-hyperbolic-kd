@@ -12,6 +12,7 @@
 #include <vector>
 #include <type_traits>
 #include <utility>
+#include <stdexcept>
 
 #include "../Globals.h"
 #include "Coordinates.h"
@@ -78,7 +79,7 @@ private:
 
 public:
 
-	BasicGraph(count n = 0);
+	BasicGraph(count n = 0, bool dummy = false);
 
 	BasicGraph(const BasicGraph<weighted, directed>& other) = default;
 
@@ -541,7 +542,6 @@ public:
 
 using graph_impl::BasicGraph;
 using Graph_T = BasicGraph<Weighted::unweighted, Directed::undirected>;
-// using Graph = Graph_T;
 using WeightedGraph_T = BasicGraph<Weighted::weighted, Directed::undirected>;
 using DirectedGraph_T = BasicGraph<Weighted::unweighted, Directed::directed>;
 using WeightedDirectedGraph_T = BasicGraph<Weighted::weighted, Directed::directed>;

@@ -47,6 +47,9 @@ void Graph4GTest::SetUp() {
 	 * move you pen from node to node:
 	 * 3 -> 1 -> 0 -> 2 -> 1 -> 4 -> 3 -> 2 -> 4
 	 */
+	n_house = 5;
+	m_house = 8;
+
 	Ghouse = createParameterizedGraph(5);
 	houseEdgesOut = {
 		{0, 2},
@@ -58,12 +61,22 @@ void Graph4GTest::SetUp() {
 		{3, 2},
 		{4, 3}
 	};
+	Ahouse = {n_house, std::vector<edgeweight>(n_house, 0.0)};
+	edgeweight ew = 1.0;
 	for (auto& e : houseEdgesOut) {
-		Ghouse.addEdge(e.first, e.second);
+		node u = e.first;
+		node v = e.second;
+		Ghouse.addEdge(u, v, ew);
+		
+		Ahouse[u][v] = ew;
+		if (!Ghouse.isDirected()) {
+			Ahouse[v][u] = ew;
+		}
+		
+		if (Ghouse.isWeighted()) {
+			ew += 1.0;
+		}
 	}
-
-	n_house = 5;
-	m_house = 8;
 }
 
 TEST_P(Graph4GTest, getId) {
@@ -284,56 +297,32 @@ TEST_P(Graph4GTest, isEmpty) {
 }
 
 TEST_P(Graph4GTest, weight) {
-	if (this->Ghouse.isWeighted()) {
-		// TODO
-	} else {
-		count c = 0;
-		for (node u = 0; u < this->Ghouse.upperNodeIdBound(); u++) {
-			for (node v = 0; v < this->Ghouse.upperNodeIdBound(); v++) {
-				if (this->Ghouse.hasEdge(u, v)) {
-					c++;
-					ASSERT_EQ(defaultEdgeWeight, this->Ghouse.weight(u, v));
-				} else {
-					ASSERT_EQ(nullWeight, this->Ghouse.weight(u, v));
-				}
-			}
-		}
-
-		if (this->Ghouse.isDirected()) {
-			ASSERT_EQ(this->m_house, c);
-		} else {
-			ASSERT_EQ(2 * this->m_house, c);
-		}
-
-		auto& e1 = this->houseEdgesOut[3];
-		auto& e2 = this->houseEdgesOut[0];
-		this->Ghouse.setWeight(e1.first, e1.second, 3.1415);
-		this->Ghouse.setWeight(e2.first, e2.second, 2.71828);
-
-		for (node u = 0; u < this->Ghouse.upperNodeIdBound(); u++) {
-			for (node v = 0; v < this->Ghouse.upperNodeIdBound(); v++) {
-				if (this->Ghouse.hasEdge(u, v)) {
-					c++;
-					ASSERT_EQ(defaultEdgeWeight, this->Ghouse.weight(u, v));
-				} else {
-					ASSERT_EQ(nullWeight, this->Ghouse.weight(u, v));
-				}
-			}
-		}
-
-		if (this->Ghouse.isDirected()) {
-			ASSERT_EQ(2 * this->m_house, c);
-		} else {
-			ASSERT_EQ(4 * this->m_house, c);
-		}
-	}
+	this->Ghouse.forNodes([&](node u) {
+		this->Ghouse.forNodes([&](node v) {
+			ASSERT_EQ(this->Ahouse[u][v], this->Ghouse.weight(u, v));
+		});
+	});
 }
 
 TEST_P(Graph4GTest, weightedDegree) {
 	if (this->Ghouse.isWeighted()) {
-		// TODO
+		if (this->Ghouse.isDirected()) {
+			// only sum weight of outgoing edges
+			ASSERT_EQ(1.0, this->Ghouse.weightedDegree(0));
+			ASSERT_EQ(5.0, this->Ghouse.weightedDegree(1));
+			ASSERT_EQ(9.0, this->Ghouse.weightedDegree(2));
+			ASSERT_EQ(13.0, this->Ghouse.weightedDegree(3));
+			ASSERT_EQ(8.0, this->Ghouse.weightedDegree(4));
+		} else {
+			ASSERT_EQ(3.0, this->Ghouse.weightedDegree(0));
+			ASSERT_EQ(15.0, this->Ghouse.weightedDegree(1));
+			ASSERT_EQ(17.0, this->Ghouse.weightedDegree(2));
+			ASSERT_EQ(21.0, this->Ghouse.weightedDegree(3));
+			ASSERT_EQ(16.0, this->Ghouse.weightedDegree(4));
+		}
 	} else {
 		if (this->Ghouse.isDirected()) {
+			// only count outgoing edges
 			ASSERT_EQ(1 * defaultEdgeWeight, this->Ghouse.weightedDegree(0));
 			ASSERT_EQ(2 * defaultEdgeWeight, this->Ghouse.weightedDegree(1));
 			ASSERT_EQ(2 * defaultEdgeWeight, this->Ghouse.weightedDegree(2));
@@ -425,39 +414,6 @@ TEST_P(Graph4GTest, forEdgesOf) {
 		// TODO
 	}
 }
-
-// TEST_P(Graph4GTest, forInEdgesOf) {
-// 	// very similar to forOutEdgesOf ...
-
-// 	count m = 0;
-// 	std::vector<bool> visited(this->m_house, false);
-
-// 	// NEXT 3 LINES ARE DIFFERENT
-// 	this->Ghouse.forNodes([&](node u) {
-// 		this->Ghouse.forInEdgesOf(u, [&](node v, node w) {
-// 			// edges should be v to w, so if we iterate over edges from u, u should be equal w
-// 			EXPECT_EQ(u, w);
-			
-// 			auto e = std::make_pair(v, w);
-// 			// find edge
-// 			auto it = std::find(this->houseEdgesOut.begin(), this->houseEdgesOut.end(), e);
-// 			EXPECT_FALSE(it == this->houseEdgesOut.end()); // check if edge is allowed to exists
-		
-// 			// find index in edge array
-// 			int i = std::distance(this->houseEdgesOut.begin(), it);
-// 			EXPECT_FALSE(visited[i]); // make sure edge was not visited before (would be visited twice)
-			
-// 			// mark edge as visited
-// 			visited[i] = true;
-// 			m++;
-// 		});
-// 	});
-
-// 	EXPECT_EQ(this->m_house, m);
-// 	for (auto b : visited) {
-// 		EXPECT_TRUE(b);
-// 	}
-// }
 
 TEST_P(Graph4GTest, BFSfrom) {
 	if (isDirectedParameterized()) {

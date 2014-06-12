@@ -206,18 +206,6 @@ public:
 	bool hasEdge(node u, node v) const;
 
 	/**
-	 * Merges edge {u,v} to become a supernode. Edges to u and v are
-	 * rewired, multiple edges merged and their weights added.
-	 * The vertex weights of @a u and @a v are added.
-	 * A self-loop is only created if @a discardSelfLoop is set to false.
-	 *
-	 * @return New node that has been created if u != v. Otherwise none.
-	 */
-	node mergeEdge(node u, node v, bool discardSelfLoop = true) {
-		throw std::runtime_error("mergeEdge is deprecated in will be removed in NetworKit >3.2.");
-	}
-
-	/**
 	 * @return Random edge
 	 */
 	std::pair<node, node> randomEdge() const;

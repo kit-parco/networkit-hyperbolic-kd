@@ -20,6 +20,7 @@ typedef index node;
 typedef uint64_t count;
 
 /**
+ * @ingroup io
  * Parser for the METIS file format.
  */
 class METISParser {

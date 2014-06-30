@@ -9,7 +9,11 @@
 #include "../graph/Graph.h"
 
 namespace NetworKit {
+
 /**
+
+ * @ingroup io
+ *
  * This class turns a graph into a very basic GraphViz file as documented in the official manual [1].
  * If a more thorough support is desired, please contact the developers over networkit@ira.uni-karlsruhe.de.
  *

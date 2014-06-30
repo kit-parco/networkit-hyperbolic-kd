@@ -14,9 +14,7 @@
 namespace NetworKit {
 
 ConnectedComponents::ConnectedComponents(const Graph& G) : G(G) {
-
 }
-
 
 void ConnectedComponents::run() {
 

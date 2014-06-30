@@ -13,6 +13,7 @@
 namespace NetworKit {
 
 /**
+ * @ingroup io
  * Reader for the METIS file format documented in [1]
  *
  * [1] http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/manual.pdf

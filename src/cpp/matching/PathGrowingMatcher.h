@@ -14,6 +14,7 @@
 namespace NetworKit {
 
 /**
+ * @ingroup matching
  * TODO: class documentation
  */
 class PathGrowingMatcher: public NetworKit::Matcher {

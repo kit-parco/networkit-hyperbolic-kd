@@ -99,11 +99,14 @@ cdef extern from "../cpp/graph/Graph.h":
 		void stealFrom(_Graph)
 		count numberOfNodes() except +
 		count numberOfEdges() except +
+		count upperNodeIdBound() except +
 		count degree(node u) except +
 		count degreeIn(node u) except +
 		count degreeOut(node u) except +
+		bool isIsolated(node u) except +
 		node addNode() except +
 		void removeNode(node u) except +
+		bool hasNode(node u) except +
 		void addEdge(node u, node v, edgeweight w) except +
 		void removeEdge(node u, node v) except +
 		bool hasEdge(node u, node v) except +
@@ -181,6 +184,17 @@ cdef class Graph:
 		"""
 		return self._this.numberOfEdges()
 
+	def upperNodeIdBound(self):
+		"""
+		Get an upper bound for the node ids in the graph
+
+		Returns
+		-------
+		count
+			An upper bound for the node ids in the graph
+		"""
+		return self._this.upperNodeIdBound()
+
 	def degree(self, u):
 		"""
 		Get the number of neighbors of `v`.
@@ -202,6 +216,22 @@ cdef class Graph:
 
 	def degreeOut(self, u):
 		return self._this.degreeOut(u)
+
+	def isIsolated(self, u):
+		"""
+		If the node `u` is isolated
+
+		Parameters
+		----------
+		u : node
+			Node.
+
+		Returns
+		-------
+		bool
+			If the node is isolated
+		"""
+		return self._this.isIsolated(u)
 
 	def addNode(self):
 		""" Add a new node to the graph and return it.
@@ -228,6 +258,21 @@ cdef class Graph:
 	 	and an exception is thrown otherwise.
 		"""
 		self._this.removeNode(u)
+
+	def hasNode(self, u):
+		""" Checks if the Graph has the node `u`, i.e. if `u` hasn't been deleted and is in the range of valid ids.
+
+		Parameters
+		----------
+		u : node
+			Node
+
+		Returns
+		-------
+		bool
+			If the Graph has the node `u`
+		"""
+		return self._this.hasNode(u)
 
 	def addEdge(self, u, v, w=1.0):
 		""" Insert an undirected edge between the nodes `u` and `v`. If the graph is weighted you can optionally
@@ -439,14 +484,22 @@ cdef class BFS:
 		The graph.
 	source : node
 		The source node of the breadth-first search.
+<<<<<<< local
 	storePaths : bool
 		store paths and number of paths?
+=======
+>>>>>>> other
 
 	"""
 	cdef _BFS* _this
 
+<<<<<<< local
 	def __cinit__(self, Graph G, source, storePaths=True):
 		self._this = new _BFS(dereference(G._this), source, storePaths)
+=======
+	def __cinit__(self, Graph G, source):
+		self._this = new _BFS(dereference(G._this), source)
+>>>>>>> other
 
 	def run(self):
 		"""
@@ -596,8 +649,13 @@ cdef class Dijkstra:
     """
 	cdef _Dijkstra* _this
 
+<<<<<<< local
 	def __cinit__(self, Graph G, source, storePaths=True):
 		self._this = new _Dijkstra(dereference(G._this), source, storePaths)
+=======
+	def __cinit__(self, Graph G, source):
+		self._this = new _Dijkstra(dereference(G._this), source)
+>>>>>>> other
 
 	def run(self):
 		""" Performs the Dijkstra SSSP algorithm on the graph given in the constructor. """
@@ -1760,6 +1818,7 @@ cdef class Partition:
 cdef extern from "../cpp/structures/Cover.h":
 	cdef cppclass _Cover "NetworKit::Cover":
 		_Cover() except +
+		_Cover(_Partition p) except +
 		set[index] subsetsOf(index e) except +
 #		index extend() except +
 		void remove(index e) except +
@@ -1788,6 +1847,10 @@ cdef extern from "../cpp/structures/Cover.h":
 cdef class Cover:
 	""" Implements a cover of a set, i.e. an assignment of its elements to possibly overlapping subsets. """
 	cdef _Cover _this
+
+	def __cinit__(self, Partition p = None):
+		if p is not None:
+			self._this = _Cover(p._this)
 
 	cdef setThis(self, _Cover other):
 		self._this = other
@@ -2178,7 +2241,7 @@ cdef class PLM(CommunityDetector):
 
 	cdef _PLM _this
 
-	def __cinit__(self, refine=True, gamma=1.0, par="balanced", maxIter=32):
+	def __cinit__(self, refine=False, gamma=1.0, par="balanced", maxIter=32):
 		self._this = _PLM(refine, gamma, stdstring(par), maxIter)
 
 	def toString(self):

@@ -21,12 +21,7 @@
 #include "../auxiliary/Random.h"
 #include "../auxiliary/Log.h"
 
-
-
 namespace NetworKit {
-
-	class ParallelPartitionCoarsening; // forward declaration for friend class
-	class GraphBuilder; // forward declaration
 
 /**
  * @ingroup graph

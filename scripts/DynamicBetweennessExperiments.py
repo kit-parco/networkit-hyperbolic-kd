@@ -2,6 +2,8 @@ from NetworKit import *
 from dynamic import *
 from centrality import *
 
+import random
+
 def removeAndAddEdges(G, nEdges, tabu=None):
 	if nEdges > G.numberOfEdges() - tabu.numberOfEdges():
 		raise Error("G does not have enough edges")
@@ -22,6 +24,17 @@ def removeAndAddEdges(G, nEdges, tabu=None):
 		addStream.append(GraphEvent(GraphEvent.EDGE_ADDITION, u, v, 1.0))
 
 	return (removeStream, addStream)
+
+
+def setRandomWeights(G, mu, sigma):
+	"""
+	Add random weights, normal distribution with mean mu and standard deviation sigma
+	"""
+	for (u, v) in G.edges():
+		w = random.normalvariate(mu, sigma)
+		G.setWeight(u, v, w)
+	return G
+
 
 
 def test(G, nEdges, batchSize, epsilon, delta):
@@ -117,16 +130,17 @@ def test(G, nEdges, batchSize, epsilon, delta):
 			}
 
 
-setNumberOfThreads(1)
-G = generators.DorogovtsevMendesGenerator(100000).generate()
-cc = properties.ConnectedComponents(G)
-cc.run()
-if (cc.numberOfComponents() == 1) :
-	nEdges = 1000
-	batchSize = 100
-	epsilon = 0.05
-	delta = 0.1
-	times = test(G, nEdges, batchSize, epsilon, delta)
-	print (times)
-else:
-	print ("The generated graph is not connected.")
+if __name__ == "__main__":
+	setNumberOfThreads(1)
+	G = generators.DorogovtsevMendesGenerator(100000).generate()
+	cc = properties.ConnectedComponents(G)
+	cc.run()
+	if (cc.numberOfComponents() == 1) :
+		nEdges = 1000
+		batchSize = 100
+		epsilon = 0.05
+		delta = 0.1
+		times = test(G, nEdges, batchSize, epsilon, delta)
+		print (times)
+	else:
+		print ("The generated graph is not connected.")

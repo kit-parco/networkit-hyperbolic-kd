@@ -8,10 +8,12 @@
 #include "CentralityGTest.h"
 #include "../Betweenness.h"
 #include "../Betweenness2.h"
+#include "../DynApproxBetweenness.h"
 #include "../ApproxBetweenness.h"
 #include "../ApproxBetweenness2.h"
 #include "../EigenvectorCentrality.h"
 #include "../PageRank.h"
+#include "../DynBetweenness.h"
 #include "../../io/METISGraphReader.h"
 #include "../../auxiliary/Log.h"
 
@@ -81,7 +83,7 @@ TEST_F(CentralityGTest, testBetweenness2Centrality) {
 }
 
 
-TEST_F(CentralityGTest, testApproxBetweenness) {
+TEST_F(CentralityGTest, testApproxBetweennessSmallGraph) {
  /* Graph:
     0    3
      \  / \
@@ -99,9 +101,9 @@ TEST_F(CentralityGTest, testApproxBetweenness) {
 	G.addEdge(3, 5);
 	G.addEdge(4, 5);
 
-	double epsilon = 0.01; // error
+	double epsilon = 0.1; // error
 	double delta = 0.1; // confidence
-	ApproxBetweenness centrality = ApproxBetweenness(G, epsilon, delta);
+	ApproxBetweenness centrality = ApproxBetweenness(G, epsilon, delta, 0);
 	centrality.run();
 	std::vector<double> bc = centrality.scores();
 

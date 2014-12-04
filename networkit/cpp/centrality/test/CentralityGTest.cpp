@@ -7,10 +7,12 @@
 
 #include "CentralityGTest.h"
 #include "../Betweenness.h"
+#include "../DynApproxBetweenness.h"
 #include "../ApproxBetweenness.h"
 #include "../ApproxBetweenness2.h"
 #include "../EigenvectorCentrality.h"
 #include "../PageRank.h"
+#include "../DynBetweenness.h"
 #include "../../io/METISGraphReader.h"
 #include "../../auxiliary/Log.h"
 
@@ -34,7 +36,7 @@ TEST_F(CentralityGTest, testBetweennessCentrality) {
 	G.addEdge(3, 5);
 	G.addEdge(4, 5);
 
-	Betweenness centrality = Betweenness(G);
+	Betweenness centrality(G);
 	centrality.run();
 	std::vector<double> bc = centrality.scores();
 
@@ -48,7 +50,39 @@ TEST_F(CentralityGTest, testBetweennessCentrality) {
 }
 
 
-TEST_F(CentralityGTest, testApproxBetweenness) {
+TEST_F(CentralityGTest, testBetweenness2Centrality) {
+/* Graph:
+	0    3
+	\  / \
+	2    5
+	/  \ /
+	1    4
+*/
+	count n = 6;
+	Graph G(n);
+
+	G.addEdge(0, 2);
+	G.addEdge(1, 2);
+	G.addEdge(2, 3);
+	G.addEdge(2, 4);
+	G.addEdge(3, 5);
+	G.addEdge(4, 5);
+
+	Betweenness centrality(G);
+	centrality.run();
+	std::vector<double> bc = centrality.scores();
+
+	const double tol = 1e-3;
+	EXPECT_NEAR(0.0, bc[0], tol);
+	EXPECT_NEAR(0.0, bc[1], tol);
+	EXPECT_NEAR(15.0, bc[2], tol);
+	EXPECT_NEAR(3.0, bc[3], tol);
+	EXPECT_NEAR(3.0, bc[4], tol);
+	EXPECT_NEAR(1.0, bc[5], tol);
+}
+
+
+TEST_F(CentralityGTest, testApproxBetweennessSmallGraph) {
  /* Graph:
     0    3
      \  / \
@@ -66,9 +100,9 @@ TEST_F(CentralityGTest, testApproxBetweenness) {
 	G.addEdge(3, 5);
 	G.addEdge(4, 5);
 
-	double epsilon = 0.01; // error
+	double epsilon = 0.1; // error
 	double delta = 0.1; // confidence
-	ApproxBetweenness centrality = ApproxBetweenness(G, epsilon, delta);
+	ApproxBetweenness centrality(G, epsilon, delta, 0);
 	centrality.run();
 	std::vector<double> bc = centrality.scores();
 
@@ -81,7 +115,7 @@ TEST_F(CentralityGTest, tryApproxBetweennessOnRealGraph) {
 
 	double epsilon = 0.01; // error
 	double delta = 0.1; // confidence
-	ApproxBetweenness centrality = ApproxBetweenness(G, epsilon, delta);
+	ApproxBetweenness centrality(G, epsilon, delta);
 	centrality.run();
 	std::vector<double> bc = centrality.scores();
 
@@ -114,7 +148,7 @@ TEST_F(CentralityGTest, testBetweennessCentralityWeighted) {
 	G.addEdge(5, 6, 3);
 	G.addEdge(5, 7, 2);
 
-	Betweenness centrality = Betweenness(G);
+	Betweenness centrality(G);
 	centrality.run();
 	std::vector<double> bc = centrality.scores();
 
@@ -154,7 +188,7 @@ TEST_F(CentralityGTest, testEigenvectorCentrality) {
 	G.addEdge(5, 6, 3);
 	G.addEdge(5, 7, 2);
 
-	EigenvectorCentrality centrality = EigenvectorCentrality(G);
+	EigenvectorCentrality centrality(G);
 	centrality.run();
 	std::vector<double> cen = centrality.scores();
 
@@ -196,7 +230,7 @@ TEST_F(CentralityGTest, testPageRankCentrality) {
 	G.addEdge(5, 7, 2);
 
 	double damp = 0.85;
-	PageRank centrality = PageRank(G, damp);
+	PageRank centrality(G, damp);
 	centrality.run();
 	std::vector<double> cen = centrality.scores();
 
@@ -216,7 +250,7 @@ TEST_F(CentralityGTest, benchSequentialBetweennessCentralityOnRealGraph) {
 	METISGraphReader reader;
 	Graph G = reader.read("input/celegans_metabolic.graph");
 	Betweenness bc(G);
-	bc.run(false);
+	bc.run();
 	std::vector<std::pair<node, double> > ranking = bc.ranking();
 	INFO("Highest rank: ", ranking[0].first, " with score ", ranking[0].second);
 }
@@ -225,7 +259,7 @@ TEST_F(CentralityGTest, benchParallelBetweennessCentralityOnRealGraph) {
 	METISGraphReader reader;
 	Graph G = reader.read("input/celegans_metabolic.graph");
 	Betweenness bc(G);
-	bc.run(true);
+	bc.run();
 	std::vector<std::pair<node, double> > ranking = bc.ranking();
 	INFO("Highest rank: ", ranking[0].first, " with score ", ranking[0].second);
 }

@@ -1,5 +1,12 @@
+""" This module contains algorithms for the calculation of centrality, i.e. ranking nodes by their structural importance
+to the network """
+
+
+__author__ = "Christian Staudt"
+
 # extension imports
-from _NetworKit import Betweenness, PageRank, EigenvectorCentrality, DegreeCentrality, ApproxBetweenness, ApproxBetweenness2
+from _NetworKit import Betweenness, PageRank, EigenvectorCentrality, DegreeCentrality, ApproxBetweenness, ApproxBetweenness2, DynBetweenness, DynApproxBetweenness
+
 
 # local imports
 from networkit.algebraic import adjacencyEigenvector, PageRankMatrix, symmetricEigenvectors
@@ -19,6 +26,40 @@ def scores(G, algorithm=Betweenness, normalized=False):
 	centrality = algorithm(G, normalized)
 	centrality.run()
 	return centrality.scores()
+
+
+def centralization(G, centralityMeasure):
+	"""
+	Compute the centralization of a network with respect to some centrality measure.
+
+	The centralization of any network is a measure of how central its most central
+	node is in relation to how central all the other nodes are.
+	Centralization measures then (a) calculate the sum in differences
+	in centrality between the most central node in a network and all other nodes;
+	and (b) divide this quantity by the theoretically largest such sum of
+	differences in any network of the same size.
+
+	Parameters
+	----------
+	G : graph
+		The graph of which to compute the centrality
+	centralityMeasure : instance of Centrality (sub)class
+				initialized algorithm object will be run
+
+	Returns
+	-------
+	double
+		centralization score
+
+	"""
+	centralityMeasure.run()
+	ranking = centralityMeasure.ranking()
+	(center, centerScore) = ranking[0]
+	maxScore = centralityMeasure.maximum()
+	diff1 = sum([(centerScore - c) for (u, c) in ranking])
+	diff2 = sum([(maxScore - c) for (u, c) in ranking])
+	return diff1 / diff2
+
 
 class SpectralCentrality:
 	"""
@@ -86,6 +127,7 @@ class SpectralCentrality:
 
 
 class SciPyEVZ(SpectralCentrality):
+	# TODO: docstring
 	def __init__(self, G, normalized=False):
 		super(SciPyEVZ, self).__init__(G, normalized=normalized)
 
@@ -102,6 +144,7 @@ class SciPyEVZ(SpectralCentrality):
 		self.eigenvalue = spectrum[0]
 
 class SciPyPageRank(SpectralCentrality):
+	# TODO: docstring
 	def __init__(self, G, damp=0.95, normalized=False):
 		super(SciPyPageRank, self).__init__(G, normalized=normalized)
 

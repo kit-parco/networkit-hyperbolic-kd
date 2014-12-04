@@ -21,14 +21,9 @@ class StaticGraphGenerator {
 public:
 
 	/** Default destructor */
-	virtual ~StaticGraphGenerator();
+	virtual ~StaticGraphGenerator() = default;
 
 	virtual Graph generate() = 0;
-
-	/** only to be used by cython - this eliminates an unnecessary copy */
-	Graph* _generate() {
-		return new Graph{std::move(generate())};
-	};
 };
 
 } /* namespace NetworKit */

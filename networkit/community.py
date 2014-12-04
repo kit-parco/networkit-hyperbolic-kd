@@ -1,8 +1,11 @@
 """ This module handles community detection, i.e. the discovery of densely connected groups in networks."""
 
+__author__ = "Christian Staudt"
+
+
 from _NetworKit import Partition, Coverage, Modularity, CommunityDetector, PLP, LPDegreeOrdered, PLM, CNM, PartitionReader, PartitionWriter,\
 	NodeStructuralRandMeasure, GraphStructuralRandMeasure, JaccardMeasure, NMIDistance,\
-	EPP, EPPFactory, CommunityGraph, EdgeListPartitionReader, GraphClusteringTools, ClusteringGenerator, PartitionIntersection, HubDominance, CoreDecomposition
+	EPP, EPPFactory, CommunityGraph, EdgeListPartitionReader, GraphClusteringTools, ClusteringGenerator, PartitionIntersection, HubDominance, CoreDecomposition, CutClustering
 
 # local imports
 #from .properties import CoreDecomposition, overview
@@ -23,9 +26,10 @@ def detectCommunities(G, algo=None, inspect=True):
 		:return communities (as type Partition)
 		"""
 	if algo is None:
-		algo = PLM(refine=False)
+		algo = PLM(G, refine=False)
 	t = stopwatch.Timer()
-	zeta = algo.run(G)
+	algo.run()
+	zeta = algo.getPartition()
 	t.stop()
 	print("{0} detected communities in {1} [s]".format(algo.toString(), t.elapsed))
 	if inspect:
@@ -62,7 +66,8 @@ def evalCommunityDetection(algo, G):
 	""" Evaluate a community detection algorithm """
 
 	t = stopwatch.Timer()
-	zeta = algo.run(G)
+	algo.run()
+	zeta = algo.getPartition()
 	t.stop()
 	results = [
 		["time [s]", t.elapsed],

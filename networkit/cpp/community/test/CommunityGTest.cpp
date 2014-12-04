@@ -51,16 +51,25 @@ TEST_F(CommunityGTest, testEnsemblePreprocessing) {
 	GraphGenerator graphGen;
 	Graph G = graphGen.makeClusteredRandomGraph(n, k, pin, pout);
 
-	EPP ensemble;
+	EPP ensemble(G);
 
 	count b = 4;
 	for (count i = 0; i < b; ++i) {
-		ensemble.addBaseClusterer(*(new PLP()));
+		auto p = new PLP(G);
+		std::unique_ptr<CommunityDetectionAlgorithm> base(p);
+		ensemble.addBaseClusterer(base);
 	}
-	ensemble.setFinalClusterer(*(new PLM()));
-	ensemble.setOverlapper(*(new HashingOverlapper));
 
-	Partition zeta = ensemble.run(G);
+	auto p = new PLM(G);
+	std::unique_ptr<CommunityDetectionAlgorithm> final(p);
+	ensemble.setFinalClusterer(final);
+
+	auto overlap = new HashingOverlapper;
+	std::unique_ptr<Overlapper> overlap_ptr(overlap);
+	ensemble.setOverlapper(overlap_ptr);
+
+	ensemble.run();
+	Partition zeta = ensemble.getPartition();
 
 	INFO("number of clusters:" , zeta.numberOfSubsets());
 
@@ -78,20 +87,29 @@ TEST_F(CommunityGTest, tryEnsemblePreprocessingCorrectness) {
 	GraphGenerator graphGen;
 	Graph G = graphGen.makeClusteredRandomGraph(n, k, pin, pout);
 
-	EPP ensemble;
+	EPP ensemble(G);
 
 	count b = 4;
 	for (count i = 0; i < b; ++i) {
-		ensemble.addBaseClusterer(*(new PLP()));
+		auto p = new PLP(G);
+		std::unique_ptr<CommunityDetectionAlgorithm> base(p);
+		ensemble.addBaseClusterer(base);
 	}
-	ensemble.setFinalClusterer(*(new PLM()));
-	ensemble.setOverlapper(*(new HashingOverlapper));
 
-	Partition zeta = ensemble.run(G);
+	auto p = new PLM(G);
+	std::unique_ptr<CommunityDetectionAlgorithm> final(p);
+	ensemble.setFinalClusterer(final);
+	auto overlap = new HashingOverlapper;
+	std::unique_ptr<Overlapper> overlap_ptr(overlap);
+	ensemble.setOverlapper(overlap_ptr);
+
+	ensemble.run();
+	Partition zeta = ensemble.getPartition();
 
 	Modularity modularity;
-	PLP plp;
-	Partition plpClus = plp.run(G);
+	PLP plp(G);
+	plp.run();
+	Partition plpClus = plp.getPartition();
 	INFO("modularity of PLP clusters: ", modularity.getQuality(plpClus, G));
 	EXPECT_EQ(k, plpClus.numberOfSubsets()) << "In this simple setting (clusters are cliques), PLP should detect all 1000 clusters";
 	INFO("modularity: " , modularity.getQuality(zeta, G));
@@ -106,8 +124,9 @@ TEST_F(CommunityGTest, testLabelPropagationOnUniformGraph) {
 	int n = 100;
 	Graph G = graphGenerator.makeErdosRenyiGraph(n, 0.2);
 
-	PLP lp;
-	Partition zeta = lp.run(G);
+	PLP lp(G);
+	lp.run();
+	Partition zeta = lp.getPartition();
 
 	EXPECT_TRUE(GraphClusteringTools::isProperClustering(G, zeta)) << "the resulting partition should be a proper clustering";
 
@@ -125,8 +144,9 @@ TEST_F(CommunityGTest, testLabelPropagationOnClusteredGraph_ForNumberOfClusters)
 	count k = 3; // number of clusters
 	Graph G = graphGenerator.makeClusteredRandomGraph(n, k, 1.0, 0.00);
 
-	PLP lp;
-	Partition zeta = lp.run(G);
+	PLP lp(G);
+	lp.run();
+	Partition zeta = lp.getPartition();
 
 	Modularity modularity;
 	double mod = modularity.getQuality(zeta, G);
@@ -152,8 +172,9 @@ TEST_F(CommunityGTest, testLabelPropagationOnClusteredGraph_ForEquality) {
 
 	Graph G = graphGen.makeClusteredRandomGraph(reference, 1.0, 0.0);	// LabelPropagation is very bad at discerning clusters and needs this large pin/pout difference
 
-	PLP lp;
-	Partition zeta = lp.run(G);
+	PLP lp(G);
+	lp.run();
+	Partition zeta = lp.getPartition();
 
 	Modularity modularity;
 	double mod = modularity.getQuality(zeta, G);
@@ -173,8 +194,9 @@ TEST_F(CommunityGTest, testLabelPropagationOnDisconnectedGraph) {
 	count k = 2; // number of clusters
 	Graph G = graphGenerator.makeClusteredRandomGraph(n, k, 1.0, 0.0);
 
-	PLP lp;
-	Partition zeta = lp.run(G);
+	PLP lp(G);
+	lp.run();
+	Partition zeta = lp.getPartition();
 
 	Modularity modularity;
 	double mod = modularity.getQuality(zeta, G);
@@ -191,8 +213,9 @@ TEST_F(CommunityGTest, testLabelPropagationOnSingleNodeWithSelfLoop) {
 	node v = 0;
 	G.setWeight(v, v, 42.0);
 
-	PLP lp;
-	Partition zeta = lp.run(G);
+	PLP lp(G);
+	lp.run();
+	Partition zeta = lp.getPartition();
 
 	EXPECT_TRUE(GraphClusteringTools::isProperClustering(G, zeta));
 	EXPECT_TRUE(GraphClusteringTools::isSingletonClustering(G, zeta));
@@ -214,8 +237,9 @@ TEST_F(CommunityGTest, testLabelPropagationOnManySmallClusters) {
 	std::pair<Graph, Partition> G_ref = graphGen.makeClusteredRandomGraphWithReferenceClustering(n, k, pin, pout);
 
 
-	PLP lp;
-	Partition zeta = lp.run(G_ref.first);
+	PLP lp(G_ref.first);
+	lp.run();
+	Partition zeta = lp.getPartition();
 
 	Modularity modularity;
 	double mod = modularity.getQuality(zeta, G_ref.first);
@@ -238,8 +262,9 @@ TEST_F(CommunityGTest, testLouvainParallel2Naive) {
 	GraphGenerator graphGen;
 	Graph G = graphGen.makeClusteredRandomGraph(n, k, pin, pout);
 
-	LouvainParallel louvain;
-	Partition zeta = louvain.run(G);
+	LouvainParallel louvain(G);
+	louvain.run();
+	Partition zeta = louvain.getPartition();
 
 	INFO("number of clusters: " , zeta.numberOfSubsets());
 
@@ -262,15 +287,17 @@ TEST_F(CommunityGTest, tryCNMandLouvainRandom) {
 	Modularity modularity;
 
 	// CNM with PQ
-	CNM cnm;
-	Partition clustering = cnm.run(G);
+	CNM cnm(G);
+	cnm.run();
+	Partition clustering = cnm.getPartition();
 	INFO("CNM number of clusters: " , clustering.numberOfSubsets());
 	INFO("modularity clustered random graph: " , modularity.getQuality(clustering, G));
 	EXPECT_TRUE(GraphClusteringTools::isProperClustering(G, clustering));
 
 	// Louvain
-	PLM louvain;
-	clustering = louvain.run(G);
+	PLM louvain(G);
+	louvain.run();
+	clustering = louvain.getPartition();
 	INFO("Louvain number of clusters: " , clustering.numberOfSubsets());
 	INFO("modularity clustered random graph: " , modularity.getQuality(clustering, G));
 	EXPECT_TRUE(GraphClusteringTools::isProperClustering(G, clustering));
@@ -278,19 +305,21 @@ TEST_F(CommunityGTest, tryCNMandLouvainRandom) {
 
 
 TEST_F(CommunityGTest, tryCNMandLouvainReal) {
-	Modularity modularity;
-	CNM cnm;
-	PLM louvain;
 	METISGraphReader reader;
 	Graph jazz = reader.read("input/jazz.graph");
+	Modularity modularity;
+	CNM cnm(jazz);
+	PLM louvain(jazz);
 
 	// CNM
-	Partition clustering = cnm.run(jazz);
+	cnm.run();
+	Partition clustering = cnm.getPartition();
 	INFO("CNM number of jazz clusters: " , clustering.numberOfSubsets());
 	INFO("CNM modularity jazz graph: " , modularity.getQuality(clustering, jazz));
 
 	// Louvain
-	clustering = louvain.run(jazz);
+	louvain.run();
+	clustering = louvain.getPartition();
 	INFO("Louvain number of jazz clusters: " , clustering.numberOfSubsets());
 	INFO("Louvain modularity jazz graph: " , modularity.getQuality(clustering, jazz));
 }
@@ -300,13 +329,13 @@ TEST_F(CommunityGTest, tryCNMandLouvainReal) {
 
 
 TEST_F(CommunityGTest, testEPPFactory) {
-
-	EPPFactory factory;
-	EPP epp = factory.make(4, "PLP", "PLM");
-
 	METISGraphReader reader;
 	Graph jazz = reader.read("input/jazz.graph");
-	Partition zeta = epp.run(jazz);
+
+	EPP epp = EPPFactory::make(jazz, 4, "PLP", "PLM");
+
+	epp.run();
+	Partition zeta = epp.getPartition();
 
 	INFO("number of clusters: " , zeta.numberOfSubsets());
 
@@ -320,15 +349,17 @@ TEST_F(CommunityGTest, testPLM) {
 	Modularity modularity;
 	Graph G = reader.read("input/PGPgiantcompo.graph");
 
-	PLM plm(false, 1.0);
-	Partition zeta = plm.run(G);
+	PLM plm(G, false, 1.0);
+	plm.run();
+	Partition zeta = plm.getPartition();
 
 	INFO("number of clusters: " , zeta.numberOfSubsets());
 	INFO("modularity: " , modularity.getQuality(zeta, G));
 	EXPECT_TRUE(GraphClusteringTools::isProperClustering(G, zeta));
 
-	PLM plmr(true, 1.0);
-	Partition zeta2 = plmr.run(G);
+	PLM plmr(G, true, 1.0);
+	plmr.run();
+	Partition zeta2 = plmr.getPartition();
 
 	INFO("number of clusters: " , zeta2.numberOfSubsets());
 	INFO("modularity: " , modularity.getQuality(zeta2, G));
@@ -347,15 +378,17 @@ TEST_F(CommunityGTest, testDeletedNodesPLM) {
 
 	G.removeNode(10);
 
-	PLM plm(false, 1.0);
-	Partition zeta = plm.run(G);
+	PLM plm(G, false, 1.0);
+	plm.run();
+	Partition zeta = plm.getPartition();
 
 	INFO("number of clusters: " , zeta.numberOfSubsets());
 	INFO("modularity: " , modularity.getQuality(zeta, G));
 	EXPECT_TRUE(GraphClusteringTools::isProperClustering(G, zeta));
 
-	PLM plmr(true, 1.0);
-	Partition zeta2 = plmr.run(G);
+	PLM plmr(G, true, 1.0);
+	plmr.run();
+	Partition zeta2 = plmr.getPartition();
 
 	INFO("number of clusters: " , zeta2.numberOfSubsets());
 	INFO("modularity: " , modularity.getQuality(zeta2, G));
@@ -377,8 +410,9 @@ TEST_F(CommunityGTest, testCommunityGraph) {
 	Partition singleton = clusteringGen.makeSingletonClustering(G);
 	com.run(G, singleton);
 	EXPECT_EQ(G.numberOfNodes(), com.getGraph().numberOfNodes());
-
-	Partition zeta = (new PLP())->run(G);
+	PLP plp(G);
+	plp.run();
+	Partition zeta = plp.getPartition();
 	com.run(G, zeta);
 	EXPECT_EQ(zeta.numberOfSubsets(), com.getGraph().numberOfNodes());
 }
@@ -643,35 +677,40 @@ TEST_F(CommunityGTest, testSampledRandMeasures) {
 
 
 TEST_F(CommunityGTest, tryParallelAgglomerativeAndPLM) {
-	// FIXME: implementation of ParallelAgglomerativeClusterer needs overhaul
-	Modularity modularity;
-	ParallelAgglomerativeClusterer aggl;
-	PLM louvain;
 	METISGraphReader reader;
 	Graph jazz = reader.read("input/jazz.graph");
 	Graph blog = reader.read("input/polblogs.graph");
-
-
+	// FIXME: implementation of ParallelAgglomerativeClusterer needs overhaul
+	Modularity modularity;
+	ParallelAgglomerativeClusterer aggl(jazz);
+	PLM louvain(jazz);
 	// *** jazz graph
 	// parallel agglomerative
-	Partition clustering = aggl.run(jazz);
+	aggl.run();
+	Partition clustering = aggl.getPartition();
 	INFO("Match-AGGL number of jazz clusters: " , clustering.numberOfSubsets());
 	INFO("Match-AGGL modularity jazz graph:   " , modularity.getQuality(clustering, jazz));
 
 	// Louvain
-	clustering = louvain.run(jazz);
+	louvain.run();
+	clustering = louvain.getPartition();
 	INFO("Louvain number of jazz clusters: " , clustering.numberOfSubsets());
 	INFO("Louvain modularity jazz graph:   " , modularity.getQuality(clustering, jazz));
 
 
+
 	// *** blog graph
+	ParallelAgglomerativeClusterer aggl2(jazz);
+	PLM louvain2(jazz);
 	// parallel agglomerative
-	clustering = aggl.run(blog);
+	aggl2.run();
+	clustering = aggl2.getPartition();
 	INFO("Match-AGGL number of blog clusters: " , clustering.numberOfSubsets());
 	INFO("Match-AGGL modularity blog graph:   " , modularity.getQuality(clustering, blog));
 
 	// Louvain
-	clustering = louvain.run(blog);
+	louvain2.run();
+	clustering = louvain2.getPartition();
 	INFO("Louvain number of blog clusters: " , clustering.numberOfSubsets());
 	INFO("Louvain modularity blog graph:   " , modularity.getQuality(clustering, blog));
 }

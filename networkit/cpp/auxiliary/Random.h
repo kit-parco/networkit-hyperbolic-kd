@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <random>
 #include <stdexcept>
+#include "Log.h"
 
 namespace Aux {
 
@@ -86,6 +87,8 @@ typename Container::const_reference choice(const Container& container) {
  */
 template <typename Element>
 const Element& weightedChoice(const std::vector<std::pair<Element, double>>& weightedElements) {
+	if (weightedElements.size() == 0)
+		throw std::runtime_error("Random::weightedChoice: input size equal to 0");
 	double total = 0.0;
 	for (const auto& entry : weightedElements) {
 		assert(entry.second >= 0.0 && "This algorithm only works with non-negative weights");
@@ -106,4 +109,3 @@ const Element& weightedChoice(const std::vector<std::pair<Element, double>>& wei
 
 
 #endif /* RANDOM_H_ */
-

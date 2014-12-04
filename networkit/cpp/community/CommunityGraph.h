@@ -19,9 +19,6 @@ namespace NetworKit {
  */
 class CommunityGraph {
 public:
-	/** Default destructor */
-	virtual ~CommunityGraph();
-
 	/**
 	 * Creates a coarsened graph of @a G according to communities in @a zeta. Edge weights are the weights of
 	 * inter-community cuts.
@@ -36,11 +33,6 @@ public:
 	 * @return The coarsened graph.
 	 */
 	virtual Graph getGraph();
-
-	/** only to be used by cython - this eliminates an unnecessary copy */
-	Graph* _getGraph() {
-		return new Graph{std::move(getGraph())};
-	};
 
 	/** 
 	 * Maps community id to node id in the community graph.

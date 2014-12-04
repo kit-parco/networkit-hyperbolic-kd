@@ -159,12 +159,6 @@ Graph::Graph(const Graph& G, bool weighted, bool directed) :
 
 }
 
-//only to be used by Cython
-void Graph::stealFrom(Graph& input) {
-	*this = std::move(input);
-}
-
-
 /** PRIVATE HELPERS **/
 
 count Graph::getNextGraphId() {
@@ -215,6 +209,7 @@ void Graph::indexEdges(bool force) {
 		});
 	}
 
+	// assign edge ids for edges in one direction
 	forNodes([&](node u) {
 		for (index i = 0; i < outEdges[u].size(); ++i) {
 			node v = outEdges[u][i];
@@ -222,19 +217,33 @@ void Graph::indexEdges(bool force) {
 				// new id
 				edgeid id = omega++;
 				outEdgeIds[u][i] = id;
-				if (! directed) {
-					// for undirected graphs, set symmetric edge id
-					index j = indexInOutEdgeArray(v, u);
-					outEdgeIds[v][j] = id;
-				} else {
-					// assign in-edge id
-					index k = indexInInEdgeArray(v, u);
-					inEdgeIds[v][k] = id;
-				}
-
 			}
 		}
 	});
+
+	// copy edge ids for the edges in the other direction. Note that "indexInOutEdgeArray" is slow
+	// which is why this second loop in parallel makes sense.
+	if (!directed) {
+		balancedParallelForNodes([&](node u) {
+			for (index i = 0; i < outEdges[u].size(); ++i) {
+				node v = outEdges[u][i];
+				if (v != none && outEdgeIds[u][i] == none) {
+					index j = indexInOutEdgeArray(v, u);
+					outEdgeIds[u][i] = outEdgeIds[v][j];
+				}
+			}
+		});
+	} else {
+		balancedParallelForNodes([&](node u) {
+			for (index i = 0; i < inEdges[u].size(); ++i) {
+				node v = inEdges[u][i];
+				if (v != none) {
+					index j = indexInOutEdgeArray(v, u);
+					inEdgeIds[u][i] = outEdgeIds[v][j];
+				}
+			}
+		});
+	}
 
 	edgesIndexed = true; // remember that edges have been indexed so that addEdge needs to create edge ids
 }
@@ -520,6 +529,40 @@ void Graph::removeEdge(node u, node v) {
 	// cause the edge is marked as deleted and we have no null values for the attributes
 }
 
+void Graph::swapEdge(node s1, node t1, node s2, node t2) {
+	index s1t1 = indexInOutEdgeArray(s1, t1);
+	if (s1t1 == none) throw std::runtime_error("The first edge does not exist");
+	index t1s1 = indexInInEdgeArray(t1, s1);
+
+	index s2t2 = indexInOutEdgeArray(s2, t2);
+	if (s2t2 == none) throw std::runtime_error("The second edge does not exist");
+	index t2s2 = indexInInEdgeArray(t2, s2);
+
+	std::swap(outEdges[s1][s1t1], outEdges[s2][s2t2]);
+
+	if (directed) {
+		std::swap(inEdges[t1][t1s1], inEdges[t2][t2s2]);
+
+		if (weighted) {
+			std::swap(inEdgeWeights[t1][t1s1], inEdgeWeights[t2][t2s2]);
+		}
+
+		if (edgesIndexed) {
+			std::swap(inEdgeIds[t1][t1s1], inEdgeIds[t2][t2s2]);
+		}
+	} else {
+		std::swap(outEdges[t1][t1s1], outEdges[t2][t2s2]);
+
+		if (weighted) {
+			std::swap(outEdgeWeights[t1][t1s1], outEdgeWeights[t2][t2s2]);
+		}
+
+		if (edgesIndexed) {
+			std::swap(outEdgeIds[t1][t1s1], outEdgeIds[t2][t2s2]);
+		}
+	}
+}
+
 bool Graph::hasEdge(node u, node v) const {
 	return indexInOutEdgeArray(u, v) != none;
 }
@@ -687,6 +730,15 @@ std::vector<node> Graph::neighbors(node u) const {
 		neighbors.push_back(v);
 	});
 	return neighbors;
+}
+
+
+Graph Graph::toUndirected() const {
+	if (directed == false) {
+		throw std::runtime_error("this graph is already undirected");
+	}
+	Graph U(*this, weighted, false);
+	return std::move(U);
 }
 
 bool Graph::checkConsistency() const {

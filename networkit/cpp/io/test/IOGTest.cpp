@@ -29,6 +29,9 @@
 #include "../EdgeListCoverReader.h"
 #include "../CoverReader.h"
 #include "../CoverWriter.h"
+#include "../GMLGraphReader.h"
+#include "../GraphToolBinaryReader.h"
+#include "../GraphToolBinaryWriter.h"
 
 #include "../../community/GraphClusteringTools.h"
 #include "../../auxiliary/Log.h"
@@ -474,8 +477,9 @@ TEST_F(IOGTest, tryReadingLFR) {
 	Graph G = graphReader.read(graphPath);
 	Partition truth = clusteringReader.read(clustPath);
 
-	PLP PLP;
-	Partition zeta = PLP.run(G);
+	PLP PLP(G);
+	PLP.run();
+	Partition zeta = PLP.getPartition();
 
 	Modularity mod;
 	INFO("static clustering quality: " , mod.getQuality(zeta, G));
@@ -578,13 +582,135 @@ TEST_F(IOGTest, testGMLGraphWriterDirected) {
 
 }
 
+TEST_F(IOGTest, testGMLGraphReaderUndirected) {
+	std::string path = "input/jazz2_undirected.gml";
+	GMLGraphReader reader;
+	Graph G = reader.read(path);
+	EXPECT_EQ(G.numberOfNodes(),5) << "number of nodes is not correct";
+	EXPECT_TRUE(G.hasEdge(0,2));
+	EXPECT_TRUE(G.hasEdge(0,1));
+	EXPECT_TRUE(G.hasEdge(0,0));
+	EXPECT_TRUE(G.hasEdge(1,1));
+	EXPECT_FALSE(G.isDirected());
+	EXPECT_TRUE(G.hasEdge(2,0));
+	EXPECT_TRUE(G.hasEdge(1,0));
+}
 
-//TEST_F(IOGTest, testEdgeListReaderOnSNAP) {
-//	std::string path = "/home/birderon/Downloads/com-amazon.ungraph.txt";
-//	EdgeListReader reader('\t',0,"#",false);
-//	Graph G = reader.read(path);
-//}
+TEST_F(IOGTest, testGMLGraphReaderDirected) {
+	std::string path = "input/jazz2_directed.gml";
+	GMLGraphReader reader;
+	Graph G = reader.read(path);
+	EXPECT_EQ(G.numberOfNodes(),5) << "number of nodes is not correct";
+	EXPECT_TRUE(G.hasEdge(0,2));
+	EXPECT_TRUE(G.hasEdge(0,1));
+	EXPECT_TRUE(G.hasEdge(0,0));
+	EXPECT_TRUE(G.hasEdge(1,1));
+	EXPECT_TRUE(G.isDirected());
+	EXPECT_FALSE(G.hasEdge(2,0));
+	EXPECT_FALSE(G.hasEdge(1,0));
 
+}
+
+TEST_F(IOGTest, testGraphToolBinaryReader) {
+	std::string path = "input/power.gt";
+	GraphToolBinaryReader reader;
+	Graph G = reader.read(path);
+	EXPECT_EQ(4941,G.numberOfNodes());
+	EXPECT_EQ(6594,G.numberOfEdges());
+	EXPECT_FALSE(G.isDirected());
+}
+
+TEST_F(IOGTest, testGraphToolBinaryWriter) {
+	Graph G(10,false,false);
+	G.addEdge(0,1);
+	G.addEdge(2,1);
+	G.addEdge(2,3);
+	G.addEdge(3,4);
+	G.addEdge(5,4);
+	G.addEdge(5,6);
+	G.addEdge(7,6);
+	G.addEdge(8,6);
+	G.addEdge(7,8);
+	G.addEdge(9,8);
+	G.addEdge(9,0);
+	GraphToolBinaryReader reader;
+	GraphToolBinaryWriter writer;
+	std::string path = "output/test.gt";
+	writer.write(G,path);
+	Graph Gread = reader.read(path);
+	EXPECT_EQ(G.numberOfNodes(),Gread.numberOfNodes());
+	EXPECT_EQ(G.numberOfEdges(),Gread.numberOfEdges());
+	EXPECT_EQ(G.isDirected(),Gread.isDirected());
+	EXPECT_EQ(G.isWeighted(),Gread.isWeighted());
+}
+
+TEST_F(IOGTest, testGraphToolBinaryWriterWithDeletedNodes) {
+	Graph G(10,false,false);
+	G.removeNode(0);
+	G.addEdge(2,1);
+	G.addEdge(2,3);
+	G.removeNode(4);
+	G.addEdge(5,6);
+	G.addEdge(7,6);
+	G.addEdge(8,6);
+	G.addEdge(7,8);
+	G.removeNode(9);
+	GraphToolBinaryReader reader;
+	GraphToolBinaryWriter writer;
+	std::string path = "output/test.gt";
+	writer.write(G,path);
+	Graph Gread = reader.read(path);
+	EXPECT_EQ(G.numberOfNodes(),Gread.numberOfNodes());
+	EXPECT_EQ(G.numberOfEdges(),Gread.numberOfEdges());
+	EXPECT_EQ(G.isDirected(),Gread.isDirected());
+	EXPECT_EQ(G.isWeighted(),Gread.isWeighted());
+}
+
+TEST_F(IOGTest, testGraphToolBinaryWriterDirected) {
+	Graph G(10,false,true);
+	G.addEdge(0,1);
+	G.addEdge(2,1);
+	G.addEdge(2,3);
+	G.addEdge(3,4);
+	G.addEdge(5,4);
+	G.addEdge(5,6);
+	G.addEdge(7,6);
+	G.addEdge(8,6);
+	G.addEdge(7,8);
+	G.addEdge(9,8);
+	G.addEdge(9,0);
+	GraphToolBinaryReader reader;
+	GraphToolBinaryWriter writer;
+	std::string path = "output/test.gt";
+	writer.write(G,path);
+	Graph Gread = reader.read(path);
+	EXPECT_EQ(G.numberOfNodes(),Gread.numberOfNodes());
+	EXPECT_EQ(G.numberOfEdges(),Gread.numberOfEdges());
+	EXPECT_EQ(G.isDirected(),Gread.isDirected());
+	EXPECT_EQ(G.isWeighted(),Gread.isWeighted());
+}
+
+TEST_F(IOGTest, testGraphToolBinaryWriterWithDeletedNodesDirected) {
+	Graph G(10,false,true);
+	G.removeNode(0);
+	G.addEdge(2,1);
+	G.addEdge(2,3);
+	G.removeNode(4);
+	G.addEdge(5,6);
+	G.addEdge(7,6);
+	G.addEdge(8,6);
+	G.addEdge(7,8);
+	G.removeNode(9);
+	GraphToolBinaryReader reader;
+	GraphToolBinaryWriter writer;
+	std::string path = "output/test.gt";
+	writer.write(G,path);
+	Graph Gread = reader.read(path);
+	EXPECT_EQ(G.numberOfNodes(),Gread.numberOfNodes());
+	EXPECT_EQ(G.numberOfEdges(),Gread.numberOfEdges());
+	EXPECT_EQ(G.isDirected(),Gread.isDirected());
+	EXPECT_EQ(G.isWeighted(),Gread.isWeighted());
+}
 
 } /* namespace NetworKit */
 

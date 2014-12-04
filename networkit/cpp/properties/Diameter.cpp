@@ -48,7 +48,7 @@ edgeweight Diameter::exactDiameter(const Graph& G) {
 
 
 
-std::pair<edgeweight, edgeweight> Diameter::estimatedDiameterRange(const Graph& G, double error) {
+std::pair<edgeweight, edgeweight> Diameter::estimatedDiameterRange(const NetworKit::Graph &G, double error, std::pair< NetworKit::node, NetworKit::node > *proof) {
 	/*
 	 * This is an implementation of the iFub-algorithm by
 	 * Pilu Crescenzi, Roberto Grossi, Michel Habib, Leonardo Lanzi, Andrea Marino:
@@ -95,19 +95,39 @@ std::pair<edgeweight, edgeweight> Diameter::estimatedDiameterRange(const Graph& 
 		// we need to wait until here as otherwise after a break in the inner loop the wrong ub might
 		// be returned if it was decreased too early
 		ub = 2*i;
+		INFO("New upper bound ", ub);
 		// second possibility, if we did not meet the break condition we might now meet it
 		if (ub <= (lb + error * lb)) {
 			break;
 		}
 
-		for (node v : level[i]) {
-			count ecc = 0;
-			std::tie(std::ignore, ecc) = Eccentricity::getValue(G, v);
-			// check if the lower bound has been improved and if yes, if the upper bound has been met
-			if (ecc > lb) {
-				lb = ecc;
-				if (ub <= (lb + error * lb)) {
-					break;
+		bool aborted = false;
+
+		#pragma omp parallel for schedule(guided)
+		for (index j = 0; j < level[i].size(); ++j) {
+			#pragma omp flush (aborted)
+			if (!aborted) {
+				node v = level[i][j];
+				count ecc = 0;
+				node w = none;
+				std::tie(w, ecc) = Eccentricity::getValue(G, v);
+				// check if the lower bound has been improved and if yes, if the upper bound has been met
+				if (ecc > lb) {
+					#pragma omp critical
+					if (ecc > lb) {
+						lb = ecc;
+
+						INFO("Found new lower bound ", lb);
+
+						if (proof != NULL) {
+							proof->first = v;
+							proof->second = w;
+						}
+
+						if (ub <= (lb + error * lb)) {
+							aborted = true;
+						}
+					}
 				}
 			}
 		}
@@ -189,7 +209,9 @@ edgeweight Diameter::estimatedVertexDiameterPedantic(const Graph& G) {
 	ConnectedComponents cc(G);
 	DEBUG("finding connected components");
 	cc.run();
+	INFO("Graph is weighted? ", G.isWeighted());
 	if (!G.isWeighted()) {
+		INFO("Number of components ", cc.numberOfComponents());
 		if (cc.numberOfComponents() > 1) {
 			DEBUG("estimating for each component in parallel");
 			std::vector<std::set<node> > components;
@@ -213,7 +235,17 @@ edgeweight Diameter::estimatedVertexDiameterPedantic(const Graph& G) {
 			return estimateFrom(G.randomNode());
 		}
 	} else {
-		count largest_comp_size = cc.getComponentSizes()[1];
+		INFO("Number of components ", cc.numberOfComponents());
+		DEBUG("Estimating size of the largest component");
+		std::map<count, count> sizes = cc.getComponentSizes();
+		count largest_comp_size = 0;
+		for(auto it = sizes.cbegin(); it != sizes.cend(); ++it) {
+			DEBUG(it->second);
+			if (it->second > largest_comp_size) {
+				largest_comp_size = it->second;
+			}
+		}
+		INFO("Largest component size: ", largest_comp_size);
 		return largest_comp_size;
 	}
 

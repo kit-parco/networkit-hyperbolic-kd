@@ -15,6 +15,7 @@
 #include "../../io/METISGraphReader.h"
 #include "../../generators/HavelHakimiGenerator.h"
 #include "../../auxiliary/Log.h"
+#include "../../generators/DorogovtsevMendesGenerator.h"
 #include "../../graph/GraphGenerator.h"
 
 namespace NetworKit {
@@ -55,6 +56,14 @@ namespace NetworKit {
  	EXPECT_TRUE(ccs.componentOfNode(3) == ccs.componentOfNode(7));
  }
 
+TEST_F(ConnectedComponentsGTest, testVertexDiameterPedantically) {
+    METISGraphReader reader;
+    DorogovtsevMendesGenerator generator(1000);
+    Graph G1 = generator.generate();
+    Graph G = Graph(G1, true, false);
+    count vd = Diameter::estimatedVertexDiameterPedantic(G);
+    EXPECT_EQ(1000, vd);
+}
 
 // TEST_F(ConnectedComponentsGTest, testGraphWithoutEdges) {
 // 	// construct graph
@@ -189,7 +198,7 @@ TEST_F(ConnectedComponentsGTest, benchHHConnectedComponents) {
 	DEBUG("Number of components in original: ", cc.numberOfComponents());
 
 	// compute HH graph and apply CC algo
-	std::vector<unsigned int> sequence = GraphProperties::degreeSequence(G);
+	std::vector<count> sequence = GraphProperties::degreeSequence(G);
 	HavelHakimiGenerator hhgen(sequence, true);
 	Graph G2 = hhgen.generate();
 	ConnectedComponents cc2(G2);
@@ -208,7 +217,7 @@ TEST_F(ConnectedComponentsGTest, benchLiveJConnectedComponents) {
 	DEBUG("Number of components in original: ", cc.numberOfComponents());
 
 	// compute HH graph and apply CC algo
-	std::vector<unsigned int> sequence = GraphProperties::degreeSequence(G);
+	std::vector<count> sequence = GraphProperties::degreeSequence(G);
 	HavelHakimiGenerator hhgen(sequence, true);
 	Graph G2 = hhgen.generate();
 	ConnectedComponents cc2(G2);

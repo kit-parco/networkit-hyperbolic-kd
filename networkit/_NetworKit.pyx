@@ -1465,6 +1465,7 @@ cdef extern from "cpp/generators/ErdosRenyiGenerator.h":
 	cdef cppclass _ErdosRenyiGenerator "NetworKit::ErdosRenyiGenerator":
 		_ErdosRenyiGenerator(count nNodes, double prob, bool directed) except +
 		_Graph generate() except +
+		bool hasFinished() except +
 
 cdef class ErdosRenyiGenerator:
 	""" Creates random graphs in the G(n,p) model.
@@ -1494,7 +1495,11 @@ cdef class ErdosRenyiGenerator:
 		del self._this
 
 	def generate(self):
-		return Graph(0).setThis(self._this.generate())
+		g = Graph(0).setThis(self._this.generate())
+		if self._this.hasFinished():
+			return g
+		else:
+			return None
 
 
 cdef extern from "cpp/generators/DorogovtsevMendesGenerator.h":

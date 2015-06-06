@@ -16,7 +16,7 @@ NetworKit::PageRank::PageRank(const Graph& G, double damp, double tol):
 
 }
 
-void NetworKit::PageRank::run() {
+void NetworKit::PageRank::runImpl() {
 	count n = G.numberOfNodes();
 	count z = G.upperNodeIdBound();
 	double oneOverN = 1.0 / (double) n;
@@ -31,6 +31,7 @@ void NetworKit::PageRank::run() {
 	});
 
 	while (! isConverged) {
+		assureRunning();
 		G.balancedParallelForNodes([&](node u) {
 			pr[u] = 0.0;
 			G.forInEdgesOf(u, [&](node v) {
@@ -62,7 +63,7 @@ void NetworKit::PageRank::run() {
 		scoreData[u] /= sum;
 	});
 
-	ran = true;
+	hasRun = true;
 }
 
 } /* namespace NetworKit */

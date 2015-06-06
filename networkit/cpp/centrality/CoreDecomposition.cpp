@@ -15,7 +15,7 @@ CoreDecomposition::CoreDecomposition(const Graph& G) : Centrality(G, false), max
 
 }
 
-void CoreDecomposition::run() {
+void CoreDecomposition::runImpl() {
 	/* Main data structure: buckets of nodes indexed by their remaining degree. */
 	typedef std::list<node> Bucket;
 	index z = G.upperNodeIdBound();
@@ -48,6 +48,7 @@ void CoreDecomposition::run() {
 	/* Main loop: Successively remove nodes in copy G2 of G. */
 	Graph G2 = G;
 	while (!G2.isEmpty()) {
+		assureRunning();
 		Bucket& cur_bucket = buckets[core];
 
 		/* Remove nodes with remaining degree <= core. */
@@ -105,12 +106,12 @@ void CoreDecomposition::run() {
 	}
 
 	maxCore = core - 1;
-	ran = true;
+	hasRun = true;
 }
 
 
 std::vector<std::set<node> > CoreDecomposition::cores() const {
-	if (! ran) throw std::runtime_error("call run method first");
+	if (!hasFinished()) throw std::runtime_error("call run method first");
 
 	std::vector<std::set<node> > cores(maxCore + 1);
 	for (index k = 0; k <= maxCore; k++) {
@@ -124,7 +125,7 @@ std::vector<std::set<node> > CoreDecomposition::cores() const {
 }
 
 std::vector<std::set<node> > CoreDecomposition::shells() const {
-	if (! ran) throw std::runtime_error("call run method first");
+	if (!hasFinished()) throw std::runtime_error("call run method first");
 
 	std::vector<std::set<node> > shells(maxCore + 1);
 	for (index k = 0; k <= maxCore; k++) {
@@ -138,7 +139,7 @@ std::vector<std::set<node> > CoreDecomposition::shells() const {
 }
 
 index CoreDecomposition::maxCoreNumber() const {
-	if (! ran) throw std::runtime_error("call run method first");
+	if (!hasFinished()) throw std::runtime_error("call run method first");
 	return maxCore;
 }
 

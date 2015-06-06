@@ -7,7 +7,7 @@ LocalClusteringCoefficient::LocalClusteringCoefficient(const Graph& G) : Central
 	if (G.isDirected()) throw std::runtime_error("Not implemented: Local clustering coefficient is currently not implemted for directed graphs");
 }
 
-void LocalClusteringCoefficient::run() {
+void LocalClusteringCoefficient::runImpl() {
 	count z = G.upperNodeIdBound();
 	scoreData.clear();
 	scoreData.resize(z); // $c(u) := \frac{2 \cdot |E(N(u))| }{\deg(u) \cdot ( \deg(u) - 1)}$
@@ -46,7 +46,7 @@ void LocalClusteringCoefficient::run() {
 			scoreData[u] = (double) triangles / (double)(d * (d - 1)); // No division by 2 since triangles are counted twice as well!
 		}
 	});
-	ran = true;
+	hasRun = true;
 }
 
 

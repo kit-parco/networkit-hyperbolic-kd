@@ -29,7 +29,7 @@ KPathCentrality::KPathCentrality(const Graph& G, double alpha, count k) : Centra
 	}
 }
 
-void KPathCentrality::run() {
+void KPathCentrality::runImpl() {
 	count z = G.upperNodeIdBound();
 	count n = G.numberOfNodes();
 	scoreData.clear();
@@ -97,7 +97,7 @@ void KPathCentrality::run() {
 		scoreData[v] = k * n * ((double) counter[v] / t);
 	});
 
-	ran = true;
+	hasRun = true;
 }
 
 

@@ -31,7 +31,7 @@ public:
 	* Compute the local clustering coefficient.
 	*
 	*/
-	void run() override;
+	void runImpl() override;
 
 
 	/**

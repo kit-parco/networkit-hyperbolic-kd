@@ -25,7 +25,7 @@ PLP::PLP(const Graph& G, const PLP& other) : CommunityDetectionAlgorithm(G, othe
 PLP::PLP(const Graph& G, const Partition baseClustering, count theta) : CommunityDetectionAlgorithm(G, baseClustering), updateThreshold(theta) {
 }
 
-void PLP::run() {
+void PLP::runImpl() {
 	if (hasRun) {
 		throw std::runtime_error("The algorithm has already run on the graph.");
 	}
@@ -70,6 +70,7 @@ void PLP::run() {
 
 	// propagate labels
 	while (nUpdated > this->updateThreshold) { // as long as a label has changed...
+		assureRunning();
 		runtime.start();
 		nIterations += 1;
 		INFO("[BEGIN] LabelPropagation: iteration #" , nIterations);

@@ -2742,7 +2742,7 @@ cdef extern from "cpp/structures/Cover.h":
 #		vector[index] getVector() except +
 #		void setName(string name) except +
 #		string getName() except +
-#		set[index] getSubsetIds() except +
+		set[index] getSubsetIds() except +
 
 
 cdef class Cover:
@@ -2953,8 +2953,15 @@ cdef class Cover:
 #	def getName(self):
 #		return self._this.getName()
 
-#	def getSubsetIds(self):
-#		return self._this.getSubsetIds()
+	def getSubsetIds(self):
+		""" Get the ids of nonempty subsets.
+
+		Returns
+		-------
+		set
+			A set of ids of nonempty subsets.
+		"""
+		return self._this.getSubsetIds()
 
 
 # Module: community
@@ -4665,8 +4672,8 @@ cdef class EigenvectorCentrality(Centrality):
 cdef extern from "cpp/centrality/CoreDecomposition.h":
 	cdef cppclass _CoreDecomposition "NetworKit::CoreDecomposition" (_Centrality):
 		_CoreDecomposition(_Graph)
-		vector[set[node]] cores() except +
-		vector[set[node]] shells() except +
+		_Cover cores() except +
+		_Partition shells() except +
 		index maxCoreNumber() except +
 
 cdef class CoreDecomposition(Centrality):
@@ -4704,18 +4711,17 @@ cdef class CoreDecomposition(Centrality):
 		vector
 			The k-cores as sets of nodes, indexed by k.
 		"""
-		return (<_CoreDecomposition*>(self._this)).cores()
+		return Cover().setThis((<_CoreDecomposition*>(self._this)).cores())
 
 	def shells(self):
-		""" Get the k-shells as sets of nodes, indexed by k.
+		""" Get the k-shells as a partition object.
 
 		Returns
 		-------
-		vector
-			The k-shells as sets of nodes, indexed by k.
+		Partition
+			The k-shells
 		"""
-		return (<_CoreDecomposition*>(self._this)).shells()
-
+		return Partition().setThis((<_CoreDecomposition*>(self._this)).shells())
 
 cdef extern from "cpp/centrality/LocalClusteringCoefficient.h":
 	cdef cppclass _LocalClusteringCoefficient "NetworKit::LocalClusteringCoefficient" (_Centrality):

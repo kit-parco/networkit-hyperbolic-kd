@@ -80,11 +80,14 @@ def computeNetworkProperties(G):
 	return networkProperties
 
 
-
-
-
-
-
+def powerLawStats(centralities):
+	powerLawStats = {}
+	for (centralityName, centralityScores) in centralities.items():
+		fit = powerlaw.Fit(centralityScores)
+		R, p = fit.distribution_compare("power_law", "exponential", normalized_ratio=True)
+		gamma = fit.alpha
+		powerLawStats[centralityName] = ((R > 0), R, gamma)
+	return powerLawStats
 
 def computeRankCorrelations(centralities : pandas.DataFrame, method="spearman"):
 	return centralities.corr(method=method)
@@ -234,6 +237,7 @@ class Profile:
 
 
 	def compute(self):
+<<<<<<< local
 		# compute node centralities
 		self.computeNodeCentralities()
 		# compute rank correlations between node centrality values
@@ -253,6 +257,12 @@ class Profile:
 
 		self.nodeCentralityStats = stdStats.append(powerLawStats)
 
+=======
+		# compute node centralities
+		self.computeNodeCentralities()
+		# compute rank correlations between node centrality values
+		self.nodeCentralityCorrelations = self.nodeCentralities.corr(method="spearman")
+>>>>>>> other
 
 	def getPage(self):
 		raise NotImplementedError("TODO")

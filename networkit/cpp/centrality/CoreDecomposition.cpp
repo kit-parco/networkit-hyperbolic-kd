@@ -16,6 +16,7 @@ CoreDecomposition::CoreDecomposition(const Graph& G) : Centrality(G, false), max
 }
 
 void CoreDecomposition::run() {
+	// TODO: kernel crashes when running on input G= (V = (0,1,2), E = ((0,1)) )
 	/* Main data structure: buckets of nodes indexed by their remaining degree. */
 	typedef std::list<node> Bucket;
 	index z = G.upperNodeIdBound();
@@ -104,37 +105,45 @@ void CoreDecomposition::run() {
 		core++;
 	}
 
-	maxCore = core - 1;
+		maxCore = core - 1;
+
+
+	// initialize Partition
+	if (shellData.numberOfElements() != z) {
+		shellData = Partition(z);
+		shellData.allToSingletons();
+	}
+	// enter values from scoreData into shellData
+	G.forNodes([&](node u){
+		shellData.moveToSubset((index) scoreData[u], (index) u);
+	});
+
+	// initialize Cover
+	if (coverData.numberOfElements() != maxCore) {
+		coverData = Cover(z);
+		coverData.setUpperBound(z);
+	}
+	//enter values from scoreData into coverData
+	for (index k = 0; k <= maxCore; k++) {
+		G.forNodes([&](node u){
+			if (scoreData[u] >= k) {
+				coverData.addToSubset((index) k, (index) u);
+			}
+		});
+	}
+
 	hasRun = true;
 }
 
 
-std::vector<std::set<node> > CoreDecomposition::cores() const {
+Cover CoreDecomposition::cores() const {
 	if (! hasRun) throw std::runtime_error("call run method first");
-
-	std::vector<std::set<node> > cores(maxCore + 1);
-	for (index k = 0; k <= maxCore; k++) {
-		G.forNodes([&](node u){
-			if (scoreData[u] >= k) {
-				cores.at(k).insert(u);
-			}
-		});
-	}
-	return cores;
+	return coverData;
 }
 
-std::vector<std::set<node> > CoreDecomposition::shells() const {
+Partition CoreDecomposition::shells() const {
 	if (! hasRun) throw std::runtime_error("call run method first");
-
-	std::vector<std::set<node> > shells(maxCore + 1);
-	for (index k = 0; k <= maxCore; k++) {
-		G.forNodes([&](node u){
-			if (scoreData[u] == k) {
-				shells.at(k).insert(u);
-			}
-		});
-	}
-	return shells;
+	return shellData;
 }
 
 index CoreDecomposition::maxCoreNumber() const {

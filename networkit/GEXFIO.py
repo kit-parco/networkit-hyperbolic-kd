@@ -144,6 +144,7 @@ class GEXFReader:
 				endTime = float(endTime)
 			except:
 				pass
+				
 		if startTime != "" and endTime != "":
 			if startTime < endTime and not controlList['elementDeleted']:
 				self.createEvent(startTime, "a"+elementType, u, v, w)

@@ -17,6 +17,8 @@ class RandomNodeEdgeScore : public EdgeScore<double> {
 public:
 	RandomNodeEdgeScore(const Graph& graph, double rneRatio = 0.8);
 	virtual void run() override;
+	virtual double score(edgeid eid) override;
+	virtual double score(node u, node v) override;
 
 private:
 	double rneRatio;

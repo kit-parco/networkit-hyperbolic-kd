@@ -15,10 +15,13 @@ import collections
 import math
 
 
-def readfile(postfix):
-	""" private helper function: profiling-meta-file to string (all whitespace characters are replaced by ' ') """
-	with open(__file__[:__file__.rfind(".py")] + "." + postfix, "r") as file:
-		return " ".join(file.read().split())
+def readfile(filename, removeWS=False):
+	""" private helper function for file-loading """
+	with open(__file__[:__file__.rfind("/")+1] + filename, "r") as file:
+		result = file.read()
+		if removeWS:
+			result = " ".join(result.split())
+		return result
 
 
 try:
@@ -66,9 +69,9 @@ try:
 		HTML("""
 			<script type="text/javascript">
 			<!--
-				""" + _initHeader("script", "javascript", readfile("js"))  + """
-				""" + _initHeader("style",  "css",        readfile("css")) + """
-				""" + _initOverlay("Overlay", readfile("overlay.html")) + """
+				""" + _initHeader("script", "javascript", readfile("html/profiling.js", True))  + """
+				""" + _initHeader("style",  "css",        readfile("html/profiling.css", True)) + """
+				""" + _initOverlay("Overlay", readfile("html/overlay.html", True)) + """
 			-->
 			</script>
 		""")
@@ -83,7 +86,8 @@ class Profile:
 	__pageCount = 0
 	__verbose = False
 	__verboseLevel = 0
-	__parallel = multiprocessing.numberOfProcessors() * 2
+	__verboseFilename = ""
+	__parallel = multiprocessing.numberOfProcessors()
 
 
 	def __init__(self, G, token=object()):
@@ -120,7 +124,7 @@ class Profile:
 			("Node Centrality",	"Page Rank",					True,	funcScores,	"Score",	centrality.PageRank, 					(G, )),
 			("Node Centrality",	"K-Path Centrality",			True,	funcScores,	"Score",	centrality.KPathCentrality,				(G, )),
 			("Node Centrality",	"Katz Centrality",				True,	funcScores,	"Score",	centrality.KatzCentrality,				(G, )),
-			("Node Centrality",	"Betweenness",					True,	funcScores,	"Score",	centrality.ApproxBetweenness2,			(G, max(42, math.log(G.numberOfNodes())**2, True)),
+			("Node Centrality",	"Betweenness",					True,	funcScores,	"Score",	centrality.ApproxBetweenness2,			(G, max(42, math.log(G.numberOfNodes())**2, True))),
 			("Partition",		"Communities",					False,	funcSizes,	"Nodes Per Community",	community.PLM, 				(G, )),
 			("Partition",		"Connected Components",			False,	funcSizes,	"Connected Nodes",	classConnectedComponents,		(G, ))
 		]: result.__addMeasure(parameter, exclude)
@@ -137,16 +141,17 @@ class Profile:
 
 
 	@classmethod
-	def setVerbose(cls, verbose=False, level=0):
+	def setVerbose(cls, verbose=False, level=0, filename=""):
 		""" TODO: """
 		cls.__verbose = verbose
 		cls.__verboseLevel = level
-
+		cls.__verboseFilename = filename
+		
 
 	@classmethod
 	def getVerbose(cls):
 		""" TODO: """
-		return (cls.__verbose, cls.__verboseLevel)
+		return (cls.__verbose, cls.__verboseLevel, cls.__verboseFilename)
 
 
 	@classmethod
@@ -176,22 +181,84 @@ class Profile:
 	def getElapsedTime(self, measure):
 		""" TODO: """
 		return self.__measures[measure]["time"]
+		
+		
+	def output(self, type, directory, style="light", color=(0, 0, 1), parallel=False):
+		""" TODO """
+		options_type = ["HTML", "LaTeX", None]
+		for o in options_type:
+			if o is None:
+				raise ValueError("unknown type: options are " + str(options_type[0:len(options_type)-1]))
+			if o == type:
+				break;
 
-
-	def show(self, style="light", color=(0, 0, 1)):
+		if type == "LaTeX":
+			raise RuntimeError("not implemented, yet")
+				
+		result = self.__format(
+			type = type,
+			directory = directory,
+			style = style,
+			color = color,
+			pageIndex = 0,
+			parallel = parallel
+		)
+		
+		if type == "HTML":
+			js = readfile("html/profiling.js", False).replace("\\\\", "\\")
+			css = readfile("html/profiling.css", False).replace("\\\\", "\\")
+			result = """
+				<!DOCTYPE HTML>
+				<html>
+					<head>
+						<meta charset="utf-8">
+						<style>
+							""" + css + """
+						</style>
+						<script type="text/x-mathjax-config">
+							MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$']]}});
+						</script>
+						<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+						<script>
+							""" + js + """
+						</script>
+					</head>
+					<body>
+						""" + result + """
+					</body>
+				</html>
+			"""
+			filename  = "index.html"
+			
+		with open(directory + "/" + filename, 'w') as file:
+			file.write(result)
+		
+	def show(self, style="light", color=(0, 0, 1), parallel=False):
 		""" TODO: """
 		try:
 			__IPYTHON__
 		except:
 			raise RuntimeError("this function cannot be used outside ipython notebook")
 
-		if self.__verbose:
-			timerAll = stopwatch.Timer()
+		result = self.__format(
+			type = "HTML",
+			directory = "",
+			style = style,
+			color = color,
+			pageIndex = self.__pageCount,
+			parallel = parallel
+		)
+		
+		display_html(HTML(result))
+		self.__pageCount = self.__pageCount + 1
 
+		
+	def __format(self, type, directory, style, color, pageIndex, parallel):
+		""" TODO """
 		theme = plot.Theme()
 		theme.set(style, color)
-
-		pool = multiprocessing.ThreadPool(self.__parallel)
+		
+		pool = multiprocessing.ThreadPool(self.__parallel, parallel)
 		for name in self.__measures:
 			category = self.__measures[name]["category"]
 			pool.put(
@@ -220,20 +287,22 @@ class Profile:
 					))
 				)
 		while pool.numberOfTasks() > 0:
-			(type, name, data) = pool.get()
+			(plotType, name, data) = pool.get()
 			try:
 				category = self.__measures[name]["category"]
 
-				if type == "Plot.Measure":
+				if plotType == "Plot.Measure":
 					(index, image) = data
 					self.__measures[name]["image"][index] = image
 			except Exception as e:
-				print("Error (Post Processing): " + type + " - " + name)
-				print(str(e))
+				self.__verbosePrint("Error (Post Processing): " + plotType + " - " + name, level=-1)
+				self.___verbosePrint(str(e), level=-1)
 		pool.join()
 
-		templateMeasure = readfile("measure.html")
-
+		if type == "HTML":
+			templateProfile = readfile("html/profile.html", False)
+			templateMeasure = readfile("html/measure.html", False)
+			
 		results = {}
 		for category in self.__correlations:
 			results[category] = {}
@@ -244,19 +313,23 @@ class Profile:
 			results[category]["Overview"] = ""
 
 			def funcHeatMap(category, correlationName):
-				result = "<div class=\"SubCategory HeatTable\" data-title=\"" + correlationName + "\">"
-				keyBList = []
-				for keyA in self.__measures:
-					if self.__measures[keyA]["category"] == category and self.__measures[keyA]["correlate"]:
-						keyBList.append(keyA)
-						for keyB in keyBList:
-							try:
-								value = self.__correlations[category][keyA][keyB]
-							except:
-								value = self.__correlations[category][keyB][keyA]
-							result += "<div class=\"HeatCell\" title=\"" + keyB + " - " + keyA + "\" data-image=\"data:image/svg+xml;utf8," + value["image"] + "\" data-heat=\"{:+.3F}\"></div>".format(value["stat"][correlationName])
-						result += "<div class=\"HeatCellName\">" + keyB + "</div><br>"
-				result += "</div>"
+				result = ""
+
+				if type == "HTML":
+					result += "<div class=\"SubCategory HeatTable\" data-title=\"" + correlationName + "\">"
+					keyBList = []
+					for keyA in self.__measures:
+						if self.__measures[keyA]["category"] == category and self.__measures[keyA]["correlate"]:
+							keyBList.append(keyA)
+							for keyB in keyBList:
+								try:
+									value = self.__correlations[category][keyA][keyB]
+								except:
+									value = self.__correlations[category][keyB][keyA]
+								result += "<div class=\"HeatCell\" title=\"" + keyB + " - " + keyA + "\" data-heat=\"{:+.3F}\"></div>".format(value["stat"][correlationName])
+							result += "<div class=\"HeatCellName\">" + keyB + "</div><br>"
+					result += "</div>"
+
 				return result
 			results[category]["Correlations"]["HeatMaps"] += funcHeatMap(category, "Pearson's Correlation Coefficient")
 			results[category]["Correlations"]["HeatMaps"] += funcHeatMap(category, "Spearman's Rank Correlation Coefficient")
@@ -264,17 +337,20 @@ class Profile:
 
 			def funcScatterPlot(category):
 				result = ""
-				keyBList = []
-				for keyA in self.__measures:
-					if self.__measures[keyA]["category"] == category and self.__measures[keyA]["correlate"]:
-						keyBList.append(keyA)
-						for keyB in keyBList:
-							if keyA != keyB:
-								try:
-									value = self.__correlations[category][keyA][keyB]
-								except:
-									value = self.__correlations[category][keyB][keyA]
-								result += "<div class=\"Thumbnail_ScatterPlot\" data-title=\"" + keyB + "\" data-title-second=\"" + keyA + "\"><img src=\"data:image/svg+xml;utf8," + value["image"] + "\" /></div>"
+
+				if type == "HTML":
+					keyBList = []
+					for keyA in self.__measures:
+						if self.__measures[keyA]["category"] == category and self.__measures[keyA]["correlate"]:
+							keyBList.append(keyA)
+							for keyB in keyBList:
+								if keyA != keyB:
+									try:
+										value = self.__correlations[category][keyA][keyB]
+									except:
+										value = self.__correlations[category][keyB][keyA]
+									result += "<div class=\"Thumbnail_ScatterPlot\" data-title=\"" + keyB + "\" data-title-second=\"" + keyA + "\"><img src=\"data:image/svg+xml;utf8," + value["image"] + "\" /></div>"
+				
 				return result
 			results[category]["Correlations"]["ScatterPlots"] += funcScatterPlot(category)
 
@@ -286,20 +362,22 @@ class Profile:
 			stat = measure["stat"]
 			assortativity = measure["assortativity"]
 
+			description = "N/A"
 			try:
-				with open(__file__[:__file__.rfind("/")] + "/description/" + key + ".txt") as file:
-					description = file.read()
+				description = readfile("description/" + key + ".txt")
 			except:
-				# description = measure["class"].__doc__
-				description = "N/A"
+				pass
 
+			extentions = ""
 			try:
-				extentions = "<div class=\"PartitionPie\"><img src=\"data:image/svg+xml;utf8," + image[2] + "\" /></div>"
+				if type == "HTML":
+					extentions = "<div class=\"PartitionPie\"><img src=\"data:image/svg+xml;utf8," + image[2] + "\" /></div>"
 			except:
-				extentions = ""
+				pass
 
 			results[category]["Measures"] += self.__formatMeasureTemplate(
 				templateMeasure,
+				pageIndex,
 				key,
 				name,
 				image,
@@ -308,30 +386,25 @@ class Profile:
 				extentions,
 				description
 			)
-			results[category]["Overview"] += "<div class=\"Thumbnail_Overview\" data-title=\"" + name + "\"><a href=\"#NetworKit_Page_" + str(self.__pageCount) + "_" + key + "\"><img src=\"data:image/svg+xml;utf8," + image[1] + "\" /></a></div>"
+			if type == "HTML":
+				results[category]["Overview"] += "<div class=\"Thumbnail_Overview\" data-title=\"" + name + "\"><a href=\"#NetworKit_Page_" + str(pageIndex) + "_" + key + "\"><img src=\"data:image/svg+xml;utf8," + image[1] + "\" /></a></div>"
 
-		templateProfile = readfile("profile.html")
 		result = self.__formatProfileTemplate(
 			templateProfile,
+			pageIndex,
 			results
 		)
-		display_html(HTML(result))
-		self.__pageCount = self.__pageCount + 1
-
-		if self.__verbose:
-			print("\ntotal time: {:.2F} s".format(timerAll.elapsed))
-
-
-	def __formatMeasureTemplate(self, template, key, name, image, stat, assortativity, extentions, description):
+		return result
+		
+		
+	def __formatMeasureTemplate(self, template, pageIndex, key, name, image, stat, assortativity, extentions, description):
 		""" TODO: """
-		pageIndex = self.__pageCount
 		result = template.format(**locals())
 		return result
 
 
-	def __formatProfileTemplate(self, template, results):
+	def __formatProfileTemplate(self, template, pageIndex, results):
 		""" TODO: """
-		pageIndex = self.__pageCount
 		properties = self.__properties
 		result = template.format(**locals())
 		return result
@@ -370,67 +443,50 @@ class Profile:
 		self.__properties["Self Loops"] = self.__G.numberOfSelfLoops()
 
 		timerInstance = stopwatch.Timer()
-		if self.__verbose:
-			print("Diameter: ", end="", flush=True)
+		self.__verbosePrint("Diameter: ", end="")
 		try:
 			diameter = properties.Diameter.estimatedDiameterRange(self.__G, error=0.1)
 		except:
 			diameter = "N/A"
 		elapsedMain = timerInstance.elapsed
-		if self.__verbose:
-			print("{:.2F} s".format(elapsedMain), flush=True)
-			print("")
+		self.__verbosePrint("{:.2F} s".format(elapsedMain))
+		self.__verbosePrint("")
 		self.__properties["Diameter Range"] = diameter
 
 
 	def __loadMeasures(self):
 		""" TODO: """
-		def funcPrint(str):
-			if self.__verbose:
-				if self.__verboseLevel >= 1:
-					print(str, flush=True)
-				else:
-					print(".", end="", flush=True)
-
 		pool = multiprocessing.ThreadPool(self.__parallel, False)
-
+			
 		for name in self.__measures:
 			measure = self.__measures[name]
-			if self.__verbose:
-				print(name + ": ", end="", flush=True)
+			self.__verbosePrint(name + ": ", end="")
 			try:
 				instance = measure["class"](*measure["parameters"])
 			except Exception as e:
 				del self.__measures[name]
-				if self.__verbose:
-					print("(removed)\n>> " + str(e), flush=True)
+				self.__verbosePrint("(removed)\n>> " + str(e))
 				continue
 
 			timerInstance = stopwatch.Timer()
 			instance.run()
 			measure["data"]["sample"] = measure["getter"](instance)
 			elapsedMain = timerInstance.elapsed
-			if self.__verbose:
-				print("{:.2F} s".format(elapsedMain), flush=True)
-
-			if self.__verbose:
-				print("    Sort: ", end="", flush=True)
+			self.__verbosePrint("{:.2F} s".format(elapsedMain))
+			
+			self.__verbosePrint("    Sort: ", end="")
 			timerPostSort = stopwatch.Timer()
 			measure["data"]["sorted"] = stat.sorted(measure["data"]["sample"])
 			elapsedPostSort = timerPostSort.elapsed
-			if self.__verbose:
-				print("{:.2F} s".format(elapsedPostSort), flush=True)
-
-			if self.__verbose:
-				print("    Rank: ", end="", flush=True)
+			self.__verbosePrint("{:.2F} s".format(elapsedPostSort))
+			
+			self.__verbosePrint("    Rank: ", end="")
 			timerPostRank = stopwatch.Timer()
 			measure["data"]["ranked"] = stat.ranked(measure["data"]["sample"])
 			elapsedPostRank = timerPostRank.elapsed
-			if self.__verbose:
-				print("{:.2F} s".format(elapsedPostRank), flush=True)
-
-			if self.__verbose:
-				print("    Assortativity: ", end="", flush=True)
+			self.__verbosePrint("{:.2F} s".format(elapsedPostRank))
+			
+			self.__verbosePrint("    Assortativity: ", end="")
 			timerPostAssortativity = stopwatch.Timer()
 			if self.__measures[name]["category"] == "Node Centrality":
 				assortativity = properties.Assortativity(self.__G, measure["data"]["sample"])
@@ -439,8 +495,7 @@ class Profile:
 			else:
 				measure["assortativity"] = float("nan")
 			elapsedPostAssortativity = timerPostAssortativity.elapsed
-			if self.__verbose:
-				print("{:.2F} s".format(elapsedPostAssortativity), flush=True)
+			self.__verbosePrint("{:.2F} s".format(elapsedPostAssortativity))
 
 			measure["time"] = (
 				elapsedMain,
@@ -449,8 +504,7 @@ class Profile:
 				elapsedPostAssortativity
 			)
 
-		if self.__verbose:
-			print("")
+		self.__verbosePrint("")
 
 		for name in self.__measures:
 			if len(self.__measures[name]["data"]["sample"]) <= 1:
@@ -474,7 +528,7 @@ class Profile:
 
 				if type == "Stat":
 					self.__measures[name]["stat"] = data
-					funcPrint("Stat: " + name)
+					self.__verbosePrint("Stat: " + name, level=1)
 					if self.__measures[name]["correlate"]:
 						for key in self.__correlations[category]:
 							self.__correlations[category][key][name] = {}
@@ -510,15 +564,30 @@ class Profile:
 
 				elif type == "Correlation":
 					(nameB, correlation) = data
-					funcPrint("Correlation: " + name + " <-> " + nameB)
+					self.__verbosePrint("Correlation: " + name + " <-> " + nameB, level=1)
 					self.__correlations[category][name][nameB]["stat"] = correlation
 
 				elif type == "Plot.Scatter":
 					(nameB, image) = data
-					funcPrint("Plot.Scatter: " + name)
+					self.__verbosePrint("Plot.Scatter: " + name, level=1)
 					self.__correlations[category][name][nameB]["image"] = image
 			except Exception as e:
-				print("Error (Post Processing): " + type + " - " + name)
-				print(str(e))
+				self.__verbosePrint("Error (Post Processing): " + type + " - " + name, level=-1)
+				self.__verbosePrint(str(e), level=-1)
 
 		pool.join()
+		
+		
+	def __verbosePrint(self, text, end="\n", level=0):
+		if self.__verboseLevel >= level:
+			text = text + end
+		else:
+			text = "."
+			
+		if self.__verbose or level < 0:
+			print(text, end="", flush=True)
+			
+		if self.__verboseFilename != "":
+			with open(self.__verboseFilename, 'a+') as file:
+				file.write(text)
+

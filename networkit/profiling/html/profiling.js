@@ -1,27 +1,3 @@
-/*
-	file: profiling.js
-	author: Mark Erb
-		
-	This file contains all JavaScript scripts for the profiling layout 
-	
-	The data will be automatically embedded as singelton into the original
-	IPython Layout 
-	
-		html > head > script id="NetworKit_script"
-		
-	In addition a function for hiding the Overlay is defined in 
-	"profiling.py"
-	
-	To prevent conflicts with the IPython Notebook, prove that every function
-	begins with	"NetworKit_".
-*/
-
-/*
-	Markup the data from "profiling.profile.html"
-	
-	Arguments:
-		id: ID of the "NetworKit_Page" to markup
- */
 function NetworKit_pageEmbed(id)
 {
 	var i, j;
@@ -48,21 +24,15 @@ function NetworKit_pageEmbed(id)
 	
 	elements = document.getElementById(id).getElementsByClassName("HeatCell");
 	for (i=0; i<elements.length; i++) {
-		var data;
-		
-		data = Math.abs(parseFloat(elements[i].getAttribute("data-heat")));
-		elements[i].style.backgroundColor = (data <= 1) ? "hsl(" + (240 + 120 * data) + ", 60%, 70%)" : "#00FF00";
-		
-		data = elements[i].getAttribute("data-image").split("|");
-		elements[i].removeAttribute("data-image");
-		elements[i].setAttribute("data-image-index", 0);
-		elements[i].setAttribute("data-image-length", data.length);
-		for (j=0; j<data.length; j++) {
-			elements[i].setAttribute("data-image-" + j, data[j]);
+		var data = parseFloat(elements[i].getAttribute("data-heat"));
+		var color = "#00FF00";
+		if (data <= 1 && data > 0) {
+			color = "hsla(0, 100%, 75%, " + (data) + ")"; 
 		}
-		elements[i].onclick = function (e) {
-			NetworKit_overlayShow((e.target) ? e.target : e.srcElement);
+		else if (data <= 0 && data >= -1) {
+			color = "hsla(240, 100%, 75%, " + (-data) + ")";
 		}
+		elements[i].style.backgroundColor = color;
 	}
 	
 	elements = document.getElementById(id).getElementsByClassName("Details");
@@ -109,12 +79,6 @@ function NetworKit_pageEmbed(id)
 }
 
 
-/*
-	Update Thumbnails.
-	
-	Arguments:
-		source: Element (class=NetworKit_Plot) to update
-*/
 function NetworKit_plotUpdate(source)
 {
 	var index = source.getAttribute("data-image-index");
@@ -124,14 +88,6 @@ function NetworKit_plotUpdate(source)
 }
 
 
-/*
-	"Hide/show" an element.
-	
-	Arguments:
-		id: ID of the element to hide/show
-		show: true  -> show
-			  false -> hide
-*/
 function NetworKit_showElement(id, show)
 {
 	var element = document.getElementById(id);
@@ -139,12 +95,6 @@ function NetworKit_showElement(id, show)
 }
 
 
-/*
-	Show Overlay.
-	
-	Arguments:
-		source: element to get data for the overlay
-*/
 function NetworKit_overlayShow(source)
 {
 	NetworKit_overlayUpdate(source);
@@ -152,12 +102,6 @@ function NetworKit_overlayShow(source)
 }
 
 
-/*
-	Update data of overlay.
-
-	Arguments:
-		source: element to get data for the overlay
-*/
 function NetworKit_overlayUpdate(source)
 {
 	document.getElementById("NetworKit_Overlay_Title").innerHTML = source.title;
@@ -172,13 +116,6 @@ function NetworKit_overlayUpdate(source)
 }
 
 
-/*
-	Shift through the possible images of the overlay.
-	
-	Arguments:
-		delta: >0 next delta-th picture
-		       <0 previous delta-th picture
-*/
 function NetworKit_overlayImageShift(delta)
 {
 	var image = document.getElementById("NetworKit_Overlay_Image");
@@ -194,12 +131,6 @@ function NetworKit_overlayImageShift(delta)
 }
 
 
-/*
-	Toggle Measure Details
-	
-	Arguments:
-		source: element to get data for the overlay
-*/
 function NetworKit_toggleDetails(source)
 {
 	var childs = source.children;

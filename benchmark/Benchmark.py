@@ -241,6 +241,7 @@ class Bench:
                     for i in range(nRuns):
                         row = {}    # benchmark data row
                         row["algo"] = algo.name
+						row["framework"] = algo.framework
                         row["graph"] = graphName
                         row["m"] = m
                         try: # timeout
@@ -317,6 +318,7 @@ class Bench:
         self.epsPlot(algoName)
 
     def plotSummary(self, algoNames=None, figsize=None):
+		""" Plot a summary of algorithm performances"""
         if algoNames is None:
             algoNames = list(self.data.keys())
         epsSummary = pandas.DataFrame()
@@ -328,14 +330,14 @@ class Bench:
         self.epsSummary = epsSummary
         self.epsSummary = self.epsSummary.reindex_axis(sorted(self.epsSummary.columns), axis=1)
         if self.save:
-            epsSummary.to_csv(os.path.join(self.outDataDir, "epsSummary.csv".format(**locals())))
+            self.epsSummary.to_csv(os.path.join(self.outDataDir, "epsSummary.csv".format(**locals())))
         # plot
         if figsize:
             plt.figure(figsize=figsize)
         plt.gca().xaxis.get_major_formatter().set_powerlimits((3, 3))
         plt.xscale("log")
         plt.xlabel("edges/s")
-        seaborn.boxplot(epsSummary, order=self.epsSummary.columns, linewidth=1.5, width=.25, color=green, vert=False)
+        seaborn.boxplot(self.epsSummary, order=self.epsSummary.columns, linewidth=1.5, width=.25, color=green, vert=False)
         if self.save:
             plt.savefig(os.path.join(self.plotDir, "epsSummary.pdf".format(**locals())), bbox_inches="tight")
 

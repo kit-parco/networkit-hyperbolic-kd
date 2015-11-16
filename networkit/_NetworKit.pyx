@@ -227,7 +227,7 @@ cdef extern from "cpp/graph/Graph.h":
 		_Graph(count, bool, bool) except +
 		_Graph(const _Graph& other) except +
 		_Graph(const _Graph& other, bool weighted, bool directed) except +
-		void indexEdges() except +
+		void indexEdges(bool) except +
 		bool hasEdgeIds() except +
 		edgeid edgeId(node, node) except +
 		count numberOfNodes() except +
@@ -400,12 +400,17 @@ cdef class Graph:
 		"""
 		return Graph().setThis(self._this.copyNodes())
 
-	def indexEdges(self):
+	def indexEdges(self, bool force = False):
 		"""
 		Assign integer ids to edges.
 
+		Parameters
+		----------
+		force : bool
+			Force re-indexing of edges.
+
 		"""
-		self._this.indexEdges()
+		self._this.indexEdges(force)
 
 	def hasEdgeIds(self):
 		"""
@@ -2453,23 +2458,6 @@ cdef class LFRGenerator(Algorithm):
 
 
 
-
-
-cdef extern from "cpp/generators/MultiscaleGenerator.h":
-	cdef cppclass _MultiscaleGenerator "NetworKit::MultiscaleGenerator":
-		_MultiscaleGenerator(_Graph) except +
-		_Graph generate() except +
-
-cdef class MultiscaleGenerator:
-	""" TODO
-	 """
-	cdef _MultiscaleGenerator* _this
-
-	def __cinit__(self, Graph G):
-		self._this = new _MultiscaleGenerator(G._this)
-
-	def generate(self):
-		return Graph().setThis(self._this.generate());
 
 
 # Module: graphio
@@ -7777,6 +7765,56 @@ cdef class JaccardDistance:
 	def getAttribute(self):
 		return self._this.getEdgeAttribute()
 
+
+cdef extern from "cpp/distance/AlgebraicDistance.h":
+	cdef cppclass _AlgebraicDistance "NetworKit::AlgebraicDistance":
+		_AlgebraicDistance(_Graph G, count numberSystems, count numberIterations, double omega, index norm) except +
+		void preprocess() except +
+		double distance(node, node) except +
+		vector[double] getEdgeAttribute() except +
+
+
+cdef class AlgebraicDistance:
+	"""
+	Algebraic distance assigns a distance value to pairs of nodes
+    according to their structural closeness in the graph.
+    Algebraic distances will become small within dense subgraphs.
+
+	Parameters
+	----------
+	G : Graph
+		The graph to calculate Jaccard distances for.
+	numberSystems : count
+	 	Number of vectors/systems used for algebraic iteration.
+	numberIterations : count
+	 	Number of iterations in each system.
+	omega : double
+	 	attenuation factor in [0,1] influencing convergence speed.
+	norm : index
+		The norm factor of the extended algebraic distance.
+	"""
+
+	cdef _AlgebraicDistance* _this
+	cdef Graph _G
+
+	def __cinit__(self, Graph G, count numberSystems=10, count numberIterations=30, double omega=0.5, index norm=0):
+		self._G = G
+		self._this = new _AlgebraicDistance(G._this, numberSystems, numberIterations, omega, norm)
+
+	def __dealloc__(self):
+		del self._this
+
+	def preprocess(self):
+		self._this.preprocess()
+		return self
+
+	def distance(self, node u, node v):
+		return self._this.distance(u, v)
+
+	def getEdgeAttribute(self):
+		return self._this.getEdgeAttribute()
+
+
 cdef class JaccardSimilarityAttributizer:
 	"""
 	The Jaccard similarity measure assigns to each edge (1 - the jaccard coefficient
@@ -7840,18 +7878,30 @@ cdef extern from "cpp/sparsification/LocalFilterScore.h":
 		_LocalFilterScoreInt(const _Graph& G, const vector[double]& a, bool logarithmic,  bothRequired) except +
 
 cdef class LocalFilterScore(EdgeScore):
+	"""
+	Local filtering edge scoring. Edges with high score are more important.
+
+	Edges are ranked locally, the top d^e (logarithmic, default) or 1+e*(d-1) edges (non-logarithmic) are kept.
+	For equal attribute values, neighbors of low degree are preferred.
+	If bothRequired is set (default: false), both neighbors need to indicate that they want to keep the edge.
+
+	Parameters
+	----------
+	G : Graph
+		The input graph
+	a : list
+		The input attribute according to which the edges shall be fitlered locally.
+	logarithmic : bool
+		If the score shall be logarithmic in the rank (then d^e edges are kept). Linear otherwise.
+	bothRequired : bool
+		if both neighbors need to indicate that they want to keep an edge (default: one suffices).
+	"""
 	cdef vector[double] _a
 
-	"""
-	TODO
-	"""
-	def __init__(self, Graph G, vector[double] a, bool logarithmic = True, bool bothRequired = False):
+	def __cinit__(self, Graph G, vector[double] a, bool logarithmic = True, bool bothRequired = False):
 		self._G = G
 		self._a = a
-		self._this = new _LocalFilterScoreDouble(G._this, a, logarithmic, bothRequired)
-
-	def __dealloc__(self):
-		del self._thisDouble
+		self._this = new _LocalFilterScoreDouble(G._this, self._a, logarithmic, bothRequired)
 
 	cdef bool isDoubleValue(self):
 		return True

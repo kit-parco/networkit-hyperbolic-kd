@@ -3,15 +3,41 @@
 NetworKit Development Guide
 ===========================
 
-NetworKit is an open-source toolkit for high-performance network
-analysis. This text is meant to provide some guidelines for the ongoing
-development of the project. It is meant for core developers, occasional
-contributors, and students working on the code.
+This text is meant to provide some guidelines for the ongoing
+development of the project. It is meant for core developers as well as
+occasional contributors.
 
 The following text assumes some basic familiarity with the Mercurial
 version control software. It is not a Mercurial tutorial, because you
 will find a good one at `hginit.com <http://hginit.com>`__. Rather, it
 explains concepts and workflows for the development of this project.
+
+If you want to contribute, you should to consider the `technical
+report <https://arxiv.org/pdf/1403.3005.pdf>`__ on NetworKit to get
+familiar with the architecture.
+
+If you use NetworKit in your research publications, please cite the
+mentioned techincal report or the specific algorithm. A list of
+publications is available on the `website <TODO:%20add%20link>`__.
+
+How to contribute
+-----------------
+
+Report bugs
+~~~~~~~~~~~
+
+For the time being, bugs should be reported by sending a report to the
+`mailing
+list <https://lists.ira.uni-karlsruhe.de/mailman/listinfo/networkit>`__.
+Please provide a minimal example so that others can reproduce that bug.
+
+Fork NetworKit
+~~~~~~~~~~~~~~
+
+Feel free to fork NetworKit on algohub and start contributing by fixing
+bugs or taking care of the issues at
+`kanboard.iti.kit.edu <https://kanboard.iti.kit.edu>`__. New and missing
+features are welcomed aswell.
 
 Repositories
 ------------
@@ -27,7 +53,7 @@ repository with a new address, its own access control etc. A fork
 contains all branches of its parent.
 
 Project Tracker (Kanboard)
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 At `kanboard.iti.kit.edu <https://kanboard.iti.kit.edu>`__ we maintain a
 project task tracker to coordinate development and releases. An account
@@ -67,8 +93,8 @@ suitable for a release in the foreseeable future.
 It can be appropriate to create additional branches for projects,
 features, developer teams etc. Creation of branches should be
 coordinated with the core development team. For this purpose, post to
-the `developers e-mail
-list <https://lists.ira.uni-karlsruhe.de/mailman/listinfo/networkit-dev>`__.
+the `mailing
+list <https://lists.ira.uni-karlsruhe.de/mailman/listinfo/networkit>`__.
 
 Tags
 ----
@@ -154,7 +180,9 @@ Multiple heads in multiple branches
 If remote changes have happened in multiple branches and you pull them,
 these branch will have multiple heads. Merging now needs to happen for
 each of the affected branches before you can push. Switch to each branch
-and perform a merge as usual.
+and perform a merge as usual. As an alternative to merging, you may try
+the ``rebase``
+`extension <https://www.mercurial-scm.org/wiki/RebaseExtension>`__.
 
 Contributions
 ~~~~~~~~~~~~~
@@ -167,71 +195,6 @@ branch. We recommend the following workflow:
 2. switch to the ``Dev`` branch
 3. make and commit your changes while being on the ``Dev`` branch
 4. send a pull request to the main repository
-
-Student Exercises
-~~~~~~~~~~~~~~~~~
-
-NetworKit is currently also used as a teaching tool. This section
-describes the workflow for student teams. Suppose the course is named,
-"Networks 101", then there will be a dedicated branch ``Networks101``
-for student exercises.
-
-1. Fork the main repository via
-   `algohub.iti.kit.edu <http://algohub.iti.kit.edu>`__ and name the
-   fork according to your team. (On the repository page, click
-   ``Options -> Fork``)
-2. Make sure that the correct access rights for your team are set. (On
-   the repository page: ``Options -> Settings``)
-3. Switch to the appropriate branch for the course (e.g.
-   ``hg up Networks101``) and ONLY work on this branch.
-4. Work with the forked repository as you please. Coordinate with your
-   team.
-5. On completion of the exercise, send a pull request from your fork to
-   the main repository. (On the repository page, click
-   ``Options -> Create Pull Request``)
-6. The pull request is now under review. Watch for and react to comments
-   from the reviewer.
-
-We also ask student teams to adhere to the following conventions:
-
--  With multiple teams working on the same exercise, append your team
-   name to the class and file names as well as the names of unit tests
-   to avoid naming clashes.
--  If you plan to make modifications to existing parts of NetworKit,
-   discuss them with the core developers first, e.g. by posting to the
-   `developers e-mail
-   list <https://lists.ira.uni-karlsruhe.de/mailman/listinfo/networkit-dev>`__.
--  Delete forked repositories when they are no longer needed.
-
-Reviewing Student Exercises
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Incoming pull requests appear as notifications on
-`algohub.iti.kit.edu <http://algohub.iti.kit.edu>`__. It is also
-possible to receive notifications via e-mail.
-
-1. Before the course starts, create an appropriate branch for the course
-   (e.g. ``Networks101``). Derive the branch from the ``Dev`` branch.
-2. Receive pull requests from student teams via
-   `algohub.iti.kit.edu <http://algohub.iti.kit.edu>`__.
-3. To review a pull request, switch to the course branch and pull from
-   the forked repository of the student team. Make sure to pull the
-   revision associated with the pull request (e.g.
-   ``hg pull -r<rev> <path/to/forked/repo>``)
-4. If everything is okay, change the status of the pull request to
-   ``Accepted`` (click ``Change Status`` above the comment field). The
-   comment field can be used to send feedback, creators of the request
-   will be notified via email.
-
-Good contributions from the student exercises should be merged back into
-the ``Dev`` branch.
-
-Student Projects
-~~~~~~~~~~~~~~~~
-
-Students with long-term projects like Bachelor's or Master's theses
-should familiarize themselves with the guidelines and select a
-forking/branching model with their advisor.
 
 Branching Cheat Sheet
 ---------------------
@@ -269,7 +232,7 @@ Versioning
 .. _devGuide-unitTests:
 
 Unit Tests and Testing
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 Every new feature must be covered by a unit test. Omitting unit tests
 makes it very likely that your feature will break silently as the
@@ -309,30 +272,30 @@ To verify that the code was built correctly: Run all unit tests with
 
 ::
 
-        ./NetworKit-Tests-Dbg --tests
+        ./NetworKit-Tests-Dbg --tests/-t
 
 Performance tests will be selected with
 
 ::
 
-        ./NetworKit-Tests-Dbg --benchmarks
+        ./NetworKit-Tests-Dbg --benchmarks/-b
 
 while experimental tests are called with
 
 ::
 
-        ./NetworKit-Tests-Dbg --trials
+        ./NetworKit-Tests-Dbg --trials/-e
 
 To run only specific unit tests, you can also add a filter expression,
 e. g.:
 
 ::
 
-        ./NetworKit-Tests-Dbg --gtest_filter=*PartitionGTest*
+        ./NetworKit-Tests-Dbg --gtest_filter=*PartitionGTest*/-f*PartitionGTest*
 
 initiates unit tests only for the Partition data structure.
 
-For Python tests, run:
+For the **Python** unit tests, run:
 
 ::
 
@@ -371,8 +334,32 @@ Code Style
    virtual method in the superclass.
 -  In Python, indent using tabs, not spaces.
 
+Algorithm interface and class hierarchy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We use the possibilities provided through inheritance to generalize the
+common behaviour of algorithm implementations:
+
+-  Data and paramters should be passed in the constructor.
+-  A void run()-method that takes no parameter triggers the execution.
+-  To retrieve the result(s), getter-functions() may be defined.
+
+The ``Algorithm`` base class also defines a few other other functions to
+query whether the algorithm can be run in parallel or to retrieve a
+string representation.
+
+There may be more levels in the class hierarchy between an algorithm
+implementation and the base class, e.g. a single-source shortest-path
+class ``SSSP`` that generalizes the behaviour of BFS and Dijkstra
+implementations or the ``Centrality`` base class. When implementing new
+features or algorithms, make sure to adapt to the existing class
+hierarchies. The least thing to do is to inherit from the ``Algorithm``
+base class. Changes to existing interfaces or suggestions for new
+interfaces should be discussed through the `mailing
+list <networkit@ira.uka.de>`__.
+
 Exposing C++ Code to Python
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------
 
 Assuming the unit tests for the new feature you implemented are correct
 and successful, you need to make your features available to Python in
@@ -389,12 +376,9 @@ that exposes the class ``NetworKit::Dijkstra``:
 
 ::
 
-        cdef extern from "../cpp/graph/Dijkstra.h":
-            cdef cppclass _Dijkstra "NetworKit::Dijkstra":
-                _Dijkstra(_Graph G, node source) except +
-                void run() except +
-                vector[edgeweight] getDistances() except +
-                vector[node] getPath(node t) except +
+        cdef extern from "cpp/graph/Dijkstra.h":
+            cdef cppclass _Dijkstra "NetworKit::Dijkstra"(_SSSP):
+                _Dijkstra(_Graph G, node source, bool storePaths, bool storeStack, node target) except +
 
 The code above exposes the C++ class definition to Cython - but not yet
 to Python. First of all, Cython needs to know which C++ declarations to
@@ -411,20 +395,68 @@ declarations match the declarations from the referenced header file.
 
 ::
 
-        cdef class Dijkstra:
+        cdef extern from "cpp/graph/SSSP.h":
+            cdef cppclass _SSSP "NetworKit::SSSP"(_Algorithm):
+                _SSSP(_Graph G, node source, bool storePaths, bool storeStack, node target) except +
+                vector[edgeweight] getDistances(bool moveOut) except +
+                [...]
+
+        cdef class SSSP(Algorithm):
+            """ Base class for single source shortest path algorithms. """
+
+            cdef Graph _G
+
+            def __init__(self, *args, **namedargs):
+                if type(self) == SSSP:
+                    raise RuntimeError("Error, you may not use SSSP directly, use a sub-class instead")
+
+            def __dealloc__(self):
+                self._G = None # just to be sure the graph is deleted
+
+            def getDistances(self, moveOut=True):
+                """
+                Returns a vector of weighted distances from the source node, i.e. the
+                length of the shortest path from the source node to any other node.
+
+                Returns
+                -------
+                vector
+                    The weighted distances from the source node to any other node in the graph.
+                """
+                return (<_SSSP*>(self._this)).getDistances(moveOut)
+            [...]
+
+We mirror the class hierarchy of the C++ world also in Cython and
+Python. This also saves some boiler plate wrapping code as the functions
+shared by Dijkstra and BFS only need to be wrapped through SSSP.
+
+::
+
+        cdef class Dijkstra(SSSP):
             """ Dijkstra's SSSP algorithm.
-                Returns list of weighted distances from node source,
-                i.e. the length of the shortest path from @a source
-                to any other node."""
-            cdef _Dijkstra* _this
-            def __cinit__(self, Graph G, source):
-                self._this = new _Dijkstra(dereference(G._this), source)
-            def run(self):
-                self._this.run()
-            def getDistances(self):
-                return self._this.getDistances()
-            def getPath(self, t):
-                return self._this.getPath(t)
+            Returns list of weighted distances from node source, i.e. the length of the shortest path from source to
+            any other node.
+
+            Dijkstra(G, source, [storePaths], [storeStack], target)
+
+            Creates Dijkstra for `G` and source node `source`.
+
+            Parameters
+            ----------
+            G : Graph
+                The graph.
+            source : node
+                The source node.
+            storePaths : bool
+                store paths and number of paths?
+            storeStack : bool
+                maintain a stack of nodes in order of decreasing distance?
+            target : node
+                target node. Search ends when target node is reached. t is set to None by default.
+            """
+            def __cinit__(self, Graph G, source, storePaths=True, storeStack=False, node target=none):
+                self._G = G
+                self._this = new _Dijkstra(G._this, source, storePaths, storeStack, target)
 
 For the class to be accessible from the Python world, you need to define
 a Python wrapper class which delegates method calls to the native class.
@@ -447,11 +479,25 @@ examples of similar classes already exposed. Listen to the Cython
 compiler - coming from C++, its error messages are in general pleasantly
 human-readable.
 
+Make algorithms interruptable with CTRL+C/SIGINT
+------------------------------------------------
+
+When an algorithms takes too long to produce a result, it can be
+interrupted with a SIGINT signal triggered by CTRL+C. When triggering
+from the Python shell while the runtime is in the C++ domain, execution
+is aborted and even terminates the Python shell. Therefor, we
+implemented a signal handler infrastructure in C++ that raises a special
+exception instead of aborting. When implementing an algorithm, it is
+strongly encouraged to integrate the signal handler into the
+implementation. There are many examples of how to use it, e.g.
+``networkit/cpp/centrality/Betweenness.cpp`` or
+``networkit/cpp/community/PartitionFragmentation.cpp``
+
 Contact
 -------
 
-To discuss important changes to NetworKit, use the `developers e-mail
-list <https://lists.ira.uni-karlsruhe.de/mailman/listinfo/networkit-dev>`__
+To discuss important changes to NetworKit, use the `mailing
+list <https://lists.ira.uni-karlsruhe.de/mailman/listinfo/networkit>`__
 (``networkit-dev@ira.uka.de``).
 
 Further Reading

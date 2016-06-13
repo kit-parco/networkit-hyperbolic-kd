@@ -53,14 +53,13 @@ Degree Distribution
 ^^^^^^^^^^^^^^^^^^^
 Empirically observed complex networks tend to show a heavy tailed degree distribution which follow a power-law with a characteristic exponent. NetworKit provides functions to analyze the
 degree distribution of a network. For details visit the
-`Degree Distribution <http://nbviewer.jupyter.org/urls/networkit.iti.kit.edu/data/uploads/docs/NetworKit_UserGuide.ipynb#Degree-Distribution>`_ Section of the User Guide.
-TODO: runtime
+`Degree Distribution <http://nbviewer.jupyter.org/urls/networkit.iti.kit.edu/data/uploads/docs/NetworKit_UserGuide.ipynb#Degree-Distribution>`_ Section of the User Guide. The algorithm runs in :math:`O(n)`.
 
-Degree Assortativity
+(Degree) Assortativity
 ^^^^^^^^^^^^^^^^^^^^
 
 Degree assortativity measures how well nodes with similar node degrees are connected to each other which can point to important aspects such as a hierarchical network composition.
-In NetworKit, we implemented Newman's formulation in linear time and constant memory requirements.
+In NetworKit, we implemented Newman's formulation in linear time (:math:`O(m)`) and constant memory requirements.
 
 Diameter
 ^^^^^^^^
@@ -177,9 +176,9 @@ library for application programming, either at the Python or the C++ level. Thro
 extensive use of closures, using the lambda syntax introduced with C++11. Shared-memory parallelism is realized with OpenMP, providing loop parallelization and synchronization
 constructs while abstracting away the details of thread creation and handling.
 
-.. image:: resources/nk_architecture.png
+.. image:: resources/NetworKit-Architecture.png
 	:align: center
-	:width: 600px
+	:width: 700px
 
 Connecting these native implementations to the Python world is enabled by the `Cython <http://cython.org>`_ toolchain. Among other things, Cython can compile pure Python code to
 C or C++, circumventing the Python interpreter, and also allows for static type annotations – yielding considerable speedup in combination. Currently we use Cython merely to

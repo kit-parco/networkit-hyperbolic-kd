@@ -53,14 +53,13 @@ Degree Distribution
 ^^^^^^^^^^^^^^^^^^^
 Empirically observed complex networks tend to show a heavy tailed degree distribution which follow a power-law with a characteristic exponent. NetworKit provides functions to analyze the
 degree distribution of a network. For details visit the
-`Degree Distribution <http://nbviewer.jupyter.org/urls/networkit.iti.kit.edu/data/uploads/docs/NetworKit_UserGuide.ipynb#Degree-Distribution>`_ Section of the User Guide.
-TODO: runtime
+`Degree Distribution <http://nbviewer.jupyter.org/urls/networkit.iti.kit.edu/data/uploads/docs/NetworKit_UserGuide.ipynb#Degree-Distribution>`_ Section of the User Guide. The algorithm runs in :math:`O(n)`.
 
-Degree Assortativity
+(Degree) Assortativity
 ^^^^^^^^^^^^^^^^^^^^
 
 Degree assortativity measures how well nodes with similar node degrees are connected to each other which can point to important aspects such as a hierarchical network composition.
-In NetworKit, we implemented Newman's formulation in linear time and constant memory requirements.
+In NetworKit, we implemented Newman's formulation in linear time (:math:`O(m)`) and constant memory requirements.
 
 Diameter
 ^^^^^^^^

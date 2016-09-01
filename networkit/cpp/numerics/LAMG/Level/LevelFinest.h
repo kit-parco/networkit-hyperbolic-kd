@@ -15,14 +15,11 @@ namespace NetworKit {
 /**
  * @ingroup numerics
  */
-class LevelFinest : public Level {
+template<class Matrix>
+class LevelFinest : public Level<Matrix> {
 public:
-	LevelFinest();
-	LevelFinest(const CSRMatrix &A);
-
-	void coarseType(const Vector &xf, Vector &xc) const override;
-	void restrict(const Vector &bf, Vector &bc) const override;
-	void interpolate(const Vector &xc, Vector &xf) const override;
+	LevelFinest() : Level<Matrix>(LevelType::FINEST) {}
+	LevelFinest(const Matrix& A) : Level<Matrix>(LevelType::FINEST, A) {}
 };
 
 } /* namespace NetworKit */

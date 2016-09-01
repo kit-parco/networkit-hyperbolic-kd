@@ -10,6 +10,7 @@
 
 #include "Centrality.h"
 #include "../numerics/LAMG/Lamg.h"
+#include "../algebraic/CSRMatrix.h"
 
 
 namespace NetworKit {
@@ -23,7 +24,7 @@ namespace NetworKit {
 class SpanningEdgeCentrality: public NetworKit::Centrality {
 protected:
 	double tol;
-	Lamg lamg;
+	Lamg<CSRMatrix> lamg;
 	uint64_t setupTime;
 
 public:

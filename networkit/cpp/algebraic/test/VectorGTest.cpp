@@ -7,6 +7,7 @@
 #ifndef NOGTEST
 
 #include "VectorGTest.h"
+#include "../AlgebraicGlobals.h"
 
 namespace NetworKit {
 
@@ -80,7 +81,7 @@ TEST(VectorGTest, testOuterProduct) {
 	Vector v1 = {1.0, -1.0};
 	Vector v2 = {1.0, 2.0,  3.0};
 
-	Matrix result = Vector::outerProduct(v1, v2);
+	DynamicMatrix result = Vector::outerProduct(v1, v2);
 	ASSERT_EQ(v1.getDimension(), result.numberOfRows());
 	ASSERT_EQ(v2.getDimension(), result.numberOfColumns());
 
@@ -135,12 +136,12 @@ TEST(VectorGTest, testVectorScalarMultiplication) {
 TEST(VectorGTest, testVectorMatrixMultiplication) {
 	Vector v = {1.0, 2.0, 3.0};
 	Vector v2 = {1.0, 2.0};
-	Vector r1 = {8, 3, 4};
-	Vector r2 = {3, 5, 9};
-	Vector r3 = {4, 9, 2};
+	// 8 3 4
+	// 3 5 9
+	// 4 9 2
+	std::vector<Triplet> triplets = {{0,0,8}, {0,1,3}, {0,2,4}, {1,0,3}, {1,1,5}, {1,2,9}, {2,0,4}, {2,1,9}, {2,2,2}};
 
-	std::vector<Vector> rows = {r1, r2, r3};
-	Matrix mat(rows);
+	DynamicMatrix mat(3,3,triplets);
 
 	Vector result = v.transpose() * mat;
 	ASSERT_TRUE(result.isTransposed());

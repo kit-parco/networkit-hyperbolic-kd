@@ -11,6 +11,7 @@
 #include <vector>
 #include <algorithm>
 #include <cassert>
+#include "../Globals.h"
 
 namespace NetworKit {
 
@@ -46,6 +47,24 @@ public:
 	 * @param pos The position in values.
 	 */
 	void scatter(double value, index pos) {
+		if (occupied[pos] < row) {
+			values[pos] = value;
+			occupied[pos] = row;
+			indices.push_back(pos);
+		} else {
+			values[pos] += value;
+		}
+	}
+
+	/**
+	 * Stores @a value at @a pos. If a valid value is already stored at @a pos then we call the binary handle
+	 * function with the stored value and the new @a value as arguments.
+	 * @param value The value to store or add at @a pos in values.
+	 * @param pos The position in values.
+	 * @param handle (double, double) -> double
+	 */
+	template<typename L>
+	void scatter(double value, index pos, L& handle) {
 		assert(pos < values.size());
 
 		if (occupied[pos] < row) {
@@ -53,7 +72,7 @@ public:
 			occupied[pos] = row;
 			indices.push_back(pos);
 		} else {
-			values[pos] += value;
+			values[pos] = handle(values[pos], value);
 		}
 	}
 

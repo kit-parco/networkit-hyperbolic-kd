@@ -153,14 +153,14 @@ TEST_F(GeneratorsBenchmark, benchmarkHyperbolicGeneratorWithSortedNodes) {
 	count n = 100000;
 	double s = 1.0;
 	double alpha = 1.0;
-	double t = 1.0;
+
 	vector<double> angles(n);
 	vector<double> radii(n);
 	double R = s*HyperbolicSpace::hyperbolicAreaToRadius(n);
 	double r = HyperbolicSpace::hyperbolicRadiusToEuclidean(R);
 	//sample points randomly
 
-	HyperbolicSpace::fillPoints(angles, radii, s, alpha);
+	HyperbolicSpace::fillPoints(angles, radii, R, alpha);
 	vector<index> permutation(n);
 
 	index p = 0;
@@ -178,7 +178,7 @@ TEST_F(GeneratorsBenchmark, benchmarkHyperbolicGeneratorWithSortedNodes) {
 		radiicopy[j] = radii[permutation[j]];
 	}
 
-	Graph G = HyperbolicGenerator().generate(anglecopy, radiicopy, r, R*t);
+	Graph G = HyperbolicGenerator().generate(anglecopy, radiicopy, r);
 	EXPECT_EQ(G.numberOfNodes(), n);
 }
 

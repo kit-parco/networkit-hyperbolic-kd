@@ -273,8 +273,8 @@ void DynamicHyperbolicGenerator::getEventsFromNodeMovement(vector<GraphEvent> &r
 			if (T == 0) {
 				localOldNeighbors = getNeighborsInBands(i, true);
 			} else {
-				Point2D<double> q = HyperbolicSpace::polarToCartesian(angles[i], radii[i]);
-				quad.getElementsProbabilistically(q, edgeProb, suppressLeft, localOldNeighbors);
+				Point<double> q({angles[i], radii[i]});
+				quad.getElementsProbabilistically(q, edgeProb, localOldNeighbors);
 			}
 			oldNeighbours.push_back(localOldNeighbors);
 		}
@@ -309,8 +309,8 @@ void DynamicHyperbolicGenerator::getEventsFromNodeMovement(vector<GraphEvent> &r
 		if (T == 0) {
 			newNeighbours = getNeighborsInBands(toWiggle[j], true);
 		} else {
-			Point2D<double> q = HyperbolicSpace::polarToCartesian(angles[toWiggle[j]], radii[toWiggle[j]]);
-			quad.getElementsProbabilistically(q, edgeProb, suppressLeft, newNeighbours);
+			Point<double> q = {angles[toWiggle[j]], radii[toWiggle[j]]};
+			quad.getElementsProbabilistically(q, edgeProb, newNeighbours);
 		}
 
 		std::sort(oldNeighbours[j].begin(), oldNeighbours[j].end());

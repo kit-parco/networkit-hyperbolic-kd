@@ -30,8 +30,8 @@ protected:
 	}
 
 	template <class T>
-	vector<QuadNode<T> > getChildren(QuadNode<T> &node) {
-		return node.children;
+	vector<std::shared_ptr<SpatialCell<T> > > getChildren(std::shared_ptr<SpatialCell<T> > node) {
+		return node->children;
 	}
 };
 

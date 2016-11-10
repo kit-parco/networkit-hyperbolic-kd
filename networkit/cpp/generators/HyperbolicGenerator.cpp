@@ -250,7 +250,7 @@ Graph HyperbolicGenerator::generate(const vector<double> &angles, const vector<d
 	#pragma omp parallel for
 	for (index i = 0; i < n; i++) {
 		vector<index> near;
-		totalCandidates += quad.getElementsProbabilistically(HyperbolicSpace::polarToCartesian(angles[i], radii[i]), edgeProb, anglesSorted, near);
+		totalCandidates += quad.getElementsProbabilistically({angles[i], radii[i]}, edgeProb, near);
 		for (index j : near) {
 			if (j >= n) ERROR("Node ", j, " prospective neighbour of ", i, " does not actually exist. Oops.");
 			if (j > i) {

@@ -54,7 +54,7 @@ TEST_F(QuadTreeGTest, testQuadTreeHyperbolicCircle) {
 		Point2D<double> query = HyperbolicSpace::polarToCartesian(angles[comparison], radii[comparison]);
 		DEBUG("Using ", comparison, " at (", angles[comparison], ",", radii[comparison], ") as query point");
 
-		vector<index> closeToOne = quad.getElementsInHyperbolicCircle(HyperbolicSpace::polarToCartesian(angles[comparison], radii[comparison]), R);
+		vector<index> closeToOne = quad.getElementsInHyperbolicCircle({angles[comparison], radii[comparison]}, R);
 		EXPECT_LE(closeToOne.size(), n);
 
 		for (index i = 0; i < closeToOne.size(); i++) {
@@ -70,6 +70,7 @@ TEST_F(QuadTreeGTest, testQuadTreeHyperbolicCircle) {
 				EXPECT_NE(closeToOne[i], closeToOne[j]);
 			}
 		}
+		/**
 		count notfound = 0;
 		count didfind = 0;
 		for (index i = 0; i < n; i++) {
@@ -103,6 +104,7 @@ TEST_F(QuadTreeGTest, testQuadTreeHyperbolicCircle) {
 		if (notfound > 0) {
 			DEBUG("Found only ", didfind, " of ", didfind + notfound, " neighbours");
 		}
+		*/
 	}
 }
 
@@ -144,7 +146,7 @@ TEST_F(QuadTreeGTest, testQuadTreeThresholdGrowth) {
 		if (query == n) query--;
 		vector<index> lastNeighbours;
 		for (double threshold = 0; threshold < R; threshold += 0.01) {
-			vector<index> neighbours = quad.getElementsInHyperbolicCircle(HyperbolicSpace::polarToCartesian(angles[query], radii[query]), threshold);
+			vector<index> neighbours = quad.getElementsInHyperbolicCircle({angles[query], radii[query]}, threshold);
 			EXPECT_GE(neighbours.size(), lastNeighbours.size());
 			if (neighbours.size() < lastNeighbours.size()) {
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
@@ -220,105 +222,7 @@ TEST_F(QuadTreeGTest, testQuadTreeDeletion) {
 		radii.erase(radii.begin()+toRemove);
 	}
 
-	QuadNode<index> root = getRoot(quad);
-	//if root is leaf node, the coarsening worked
-	EXPECT_EQ(getChildren(root).size(), 0);
-}
-
-/**
- * Test whether the points found by a Euclidean range query on the quadtree root are exactly those whose Euclidean distance to the query point is smaller than the threshold.
- */
-TEST_F(QuadTreeGTest, testEuclideanCircle) {
-	count n = 1000;
-	double R = 1;
-	double r = HyperbolicSpace::hyperbolicRadiusToEuclidean(R);
-	vector<double> angles(n);
-	vector<double> radii(n);
-	HyperbolicSpace::fillPoints(angles, radii, R, 1);
-	double max = 0;
-	for (index i = 0; i < n; i++) {
-		radii[i] = HyperbolicSpace::hyperbolicRadiusToEuclidean(radii[i]);
-		if (radii[i] == r) radii[i] = std::nextafter(radii[i], 0);
-
-		if (radii[i] > max) {
-			max = radii[i];
-		}
-	}
-	Quadtree<index> quad(max+(1-max)/4);
-
-	for (index i = 0; i < n; i++) {
-		EXPECT_GE(angles[i], 0);
-		EXPECT_LT(angles[i], 2*M_PI);
-		EXPECT_GE(radii[i], 0);
-		EXPECT_LT(radii[i], R);
-		TRACE("Added (", angles[i], ",", radii[i], ")");
-		quad.addContent(i, angles[i], radii[i]);
-	}
-	vector<index> all = quad.getElements();
-	EXPECT_EQ(all.size(), n);
-	QuadNode<index> root = getRoot(quad);
-	for (index i = 0; i < 100; i++) {
-		index comparison = Aux::Random::integer(n);
-		Point2D<double> origin;
-		Point2D<double> query = HyperbolicSpace::polarToCartesian(angles[comparison], radii[comparison]);
-		double radius = Aux::Random::real(1);//this may overshoot the poincaré disc, this is intentional. I want to know what happens
-		double minR = query.length() - radius;
-		double maxR = query.length() + radius;
-		double minPhi, maxPhi, phi_c, r_c, spread;
-		if (minR < 0) {
-			maxR = std::max(abs(minR), maxR);
-			minR = 0;
-			minPhi = 0;
-			maxPhi = 2*M_PI;
-		} else {
-			spread = asin(radius / query.length());
-			HyperbolicSpace::cartesianToPolar(query, phi_c, r_c);
-			minPhi = phi_c - spread;
-			maxPhi = phi_c + spread;
-			/**
-			 * what to do if they overlap the 2\pi line? Well, have to make two separate calls and collect
-			 */
-		}
-
-		/**
-		 * get Elements in Circle
-		 */
-
-		vector<index> circleDenizens;
-
-		root.getElementsInEuclideanCircle(query, radius, circleDenizens, minPhi, maxPhi, minR, maxR);
-		if (minPhi < 0) {
-			root.getElementsInEuclideanCircle(query, radius, circleDenizens, 2*M_PI+minPhi, 2*M_PI, minR, maxR);
-		}
-		if (maxPhi > 2*M_PI) {
-			root.getElementsInEuclideanCircle(query, radius, circleDenizens, 0, maxPhi - 2*M_PI, minR, maxR);
-		}
-
-		//check whether bounds were correct by calling again without bounds and comparing
-		vector<index> alternateDenizens;
-		root.getElementsInEuclideanCircle(query, radius, alternateDenizens);
-
-		EXPECT_EQ(circleDenizens.size(), alternateDenizens.size());
-
-
-		for (index j = 0; j < n; j++) {
-			Point2D<double> comp = HyperbolicSpace::polarToCartesian(angles[j], radii[j]);
-			double dist = comp.distance(query);
-			if (dist < radius) {
-				bool found = false;
-				for (index k = 0; k < circleDenizens.size(); k++) {
-					if (circleDenizens[k] == j) {
-						found = true;
-					}
-				}
-				EXPECT_TRUE(found)<< "dist(" << j << "," << comparison << ") = "
-						<< dist << " < " << radius;
-				if (!found) {
-					DEBUG("angle: ", angles[j], ", radius: ", radii[j]);
-				}
-			}
-		}
-	}
+	EXPECT_EQ(1, quad.height());
 }
 
 /**
@@ -354,43 +258,51 @@ TEST_F(QuadTreeGTest, testQuadTreeBalance) {
 	}
 
 	QuadNode<index> root = getRoot(quad);
+	std::shared_ptr<QuadNode<index>> rootPointer(new QuadNode<index>(root));//this is bad style, since if one of them goes out of scope the other one is invalidated.
 
 	//visit tree
-	std::stack<QuadNode<index> > toAnalyze;
-	toAnalyze.push(root);
+	std::stack<std::shared_ptr<SpatialCell<index> > > toAnalyze;
+	toAnalyze.push(rootPointer);
+	TRACE("Pushed root pointer.");
 	while (!toAnalyze.empty()) {
-		QuadNode<index> current = toAnalyze.top();
+		std::shared_ptr<SpatialCell<index>> current = toAnalyze.top();
+		TRACE("Got stack top.");
 		toAnalyze.pop();
-		if (current.height() > 1) {
-			vector<QuadNode<index> > children = getChildren(current);
-			EXPECT_EQ(children.size(), 4);
+		TRACE("Popped stack top.");
+		if (current->height() > 1) {
+			vector<std::shared_ptr<SpatialCell<index> > > children = getChildren(current);
+			TRACE("Got children.");
+			ASSERT_EQ(children.size(), 4);
 
-			EXPECT_LE(children[0].size(), 2*children[1].size());
-			EXPECT_LE(children[0].size(), 2*children[3].size());
+			EXPECT_LE(children[0]->size(), 2*children[1]->size());
+			EXPECT_LE(children[0]->size(), 2*children[3]->size());
 
-			EXPECT_LE(children[1].size(), 2*children[0].size());
-			EXPECT_LE(children[1].size(), 2*children[2].size());
+			EXPECT_LE(children[1]->size(), 2*children[0]->size());
+			EXPECT_LE(children[1]->size(), 2*children[2]->size());
 
-			EXPECT_LE(children[2].size(), 2*children[1].size());
-			EXPECT_LE(children[2].size(), 2*children[3].size());
+			EXPECT_LE(children[2]->size(), 2*children[1]->size());
+			EXPECT_LE(children[2]->size(), 2*children[3]->size());
 
-			EXPECT_LE(children[3].size(), 2*children[2].size());
-			EXPECT_LE(children[3].size(), 2*children[0].size());
+			EXPECT_LE(children[3]->size(), 2*children[2]->size());
+			EXPECT_LE(children[3]->size(), 2*children[0]->size());
 
-			EXPECT_LE(children[0].height(), children[1].height()+1);
-			EXPECT_LE(children[0].height(), children[3].height()+1);
+			EXPECT_LE(children[0]->height(), children[1]->height()+1);
+			EXPECT_LE(children[0]->height(), children[3]->height()+1);
 
-			EXPECT_LE(children[1].height(), children[0].height()+1);
-			EXPECT_LE(children[1].height(), children[2].height()+1);
+			EXPECT_LE(children[1]->height(), children[0]->height()+1);
+			EXPECT_LE(children[1]->height(), children[2]->height()+1);
 
-			EXPECT_LE(children[2].height(), children[1].height()+1);
-			EXPECT_LE(children[2].height(), children[3].height()+1);
+			EXPECT_LE(children[2]->height(), children[1]->height()+1);
+			EXPECT_LE(children[2]->height(), children[3]->height()+1);
 
-			EXPECT_LE(children[3].height(), children[2].height()+1);
-			EXPECT_LE(children[3].height(), children[0].height()+1);
+			EXPECT_LE(children[3]->height(), children[2]->height()+1);
+			EXPECT_LE(children[3]->height(), children[0]->height()+1);
 			for (auto child : children) {
 				toAnalyze.push(child);
+				TRACE("Pushed child.");
 			}
+		} else {
+			TRACE("No children.");
 		}
 	}
 }
@@ -454,7 +366,7 @@ TEST_F(QuadTreeGTest, testProbabilisticQuery) {
 		double acc = Aux::Random::probability() ;
 		auto edgeProb = [acc](double distance) -> double {return acc;};
 		vector<index> near;
-		quad.getElementsProbabilistically(HyperbolicSpace::polarToCartesian(angles[query], radii[query]), edgeProb, near);
+		quad.getElementsProbabilistically({angles[query], radii[query]}, edgeProb, near);
 		EXPECT_NEAR(near.size(), acc*n, std::max(acc*n*0.25, 10.0));
 	}
 
@@ -462,12 +374,12 @@ TEST_F(QuadTreeGTest, testProbabilisticQuery) {
 
 	auto edgeProb = [](double distance) -> double {return 1;};
 	vector<index> near;
-	quad.getElementsProbabilistically(HyperbolicSpace::polarToCartesian(angles[0], radii[0]), edgeProb, near);
+	quad.getElementsProbabilistically({angles[0], radii[0]}, edgeProb, near);
 	EXPECT_EQ(n, near.size());
 
 	auto edgeProb2 = [](double distance) -> double {return 0;};
 	near.clear();
-	quad.getElementsProbabilistically(HyperbolicSpace::polarToCartesian(angles[0], radii[0]), edgeProb2, near);
+	quad.getElementsProbabilistically({angles[0], radii[0]}, edgeProb2, near);
 	EXPECT_EQ(0, near.size());
 }
 
@@ -501,7 +413,7 @@ TEST_F(QuadTreeGTest, testProbabilisticQueryKD) {
 		double acc = Aux::Random::probability() ;
 		auto edgeProb = [acc](double distance) -> double {return acc;};
 		vector<index> near;
-		kd.getElementsProbabilistically(Point<double>({angles[query], radii[query]}), edgeProb, near);
+		kd.getElementsProbabilistically({angles[query], radii[query]}, edgeProb, near);
 		EXPECT_NEAR(near.size(), acc*n, std::max(acc*n*0.25, 10.0));
 	}
 
@@ -576,142 +488,142 @@ TEST_F(QuadTreeGTest, testCartesianEuclidQuery) {
 }
 
 
+//
+//TEST_F(QuadTreeGTest, testLeftSuppression) {
+//	/**
+//	 * define parameters
+//	 */
+//	count n = 100000;
+//	double k = 10;
+//	count m = n*k/2;
+//	double targetR = HyperbolicSpace::getTargetRadius(n, m);
+//	double R = HyperbolicSpace::hyperbolicAreaToRadius(n);
+//	double r = HyperbolicSpace::hyperbolicRadiusToEuclidean(R);
+//	double alpha = 1;
+//
+//	//allocate data structures
+//	vector<double> angles(n), radii(n);
+//
+//	/**
+//	 * generate values and construct quadtree
+//	 */
+//	HyperbolicSpace::fillPoints(angles, radii, targetR, alpha);
+//	Quadtree<index> quad(HyperbolicSpace::hyperbolicRadiusToEuclidean(targetR));
+//
+//	for (index i = 0; i < n; i++) {
+//		radii[i] = HyperbolicSpace::hyperbolicRadiusToEuclidean(radii[i]);
+//		if (radii[i] == r) radii[i] = std::nextafter(radii[i], 0);
+//		quad.addContent(i, angles[i], radii[i]);
+//	}
+//	EXPECT_EQ(quad.size(), n);
+//
+//	//now test
+//	for (index i = 0; i < n; i++) {
+//		vector<index> allNeighbours;
+//		vector<index> rightNeighbours;
+//		quad.getElementsInHyperbolicCircle({angles[i], radii[i]}, targetR, true, rightNeighbours);
+//		quad.getElementsInHyperbolicCircle({angles[i], radii[i]}, targetR, false, allNeighbours);
+//		EXPECT_LE(rightNeighbours.size(), allNeighbours.size());
+//		index aIndex, bIndex;
+//		for (aIndex = 0, bIndex = 0; aIndex < rightNeighbours.size() && bIndex < allNeighbours.size(); aIndex++, bIndex++)  {
+//			//EXPECT_GE(angles[rightNeighbours[aIndex]], angles[i]);//all elements returned by partial query are right
+//			while(rightNeighbours[aIndex] != allNeighbours[bIndex]) {//iterate over suppressed elements until next match
+//				EXPECT_LT(angles[allNeighbours[bIndex]], angles[i]);//all elements suppressed are left
+//				bIndex++;
+//			}
+//		}
+//		EXPECT_EQ(aIndex, rightNeighbours.size());//all elements in partial query are also contained in complete query
+//	}
+//}
 
-TEST_F(QuadTreeGTest, testLeftSuppression) {
-	/**
-	 * define parameters
-	 */
-	count n = 100000;
-	double k = 10;
-	count m = n*k/2;
-	double targetR = HyperbolicSpace::getTargetRadius(n, m);
-	double R = HyperbolicSpace::hyperbolicAreaToRadius(n);
-	double r = HyperbolicSpace::hyperbolicRadiusToEuclidean(R);
-	double alpha = 1;
-
-	//allocate data structures
-	vector<double> angles(n), radii(n);
-
-	/**
-	 * generate values and construct quadtree
-	 */
-	HyperbolicSpace::fillPoints(angles, radii, targetR, alpha);
-	Quadtree<index> quad(HyperbolicSpace::hyperbolicRadiusToEuclidean(targetR));
-
-	for (index i = 0; i < n; i++) {
-		radii[i] = HyperbolicSpace::hyperbolicRadiusToEuclidean(radii[i]);
-		if (radii[i] == r) radii[i] = std::nextafter(radii[i], 0);
-		quad.addContent(i, angles[i], radii[i]);
-	}
-	EXPECT_EQ(quad.size(), n);
-
-	//now test
-	for (index i = 0; i < n; i++) {
-		vector<index> allNeighbours;
-		vector<index> rightNeighbours;
-		quad.getElementsInHyperbolicCircle(HyperbolicSpace::polarToCartesian(angles[i], radii[i]), targetR, true, rightNeighbours);
-		quad.getElementsInHyperbolicCircle(HyperbolicSpace::polarToCartesian(angles[i], radii[i]), targetR, false, allNeighbours);
-		EXPECT_LE(rightNeighbours.size(), allNeighbours.size());
-		index aIndex, bIndex;
-		for (aIndex = 0, bIndex = 0; aIndex < rightNeighbours.size() && bIndex < allNeighbours.size(); aIndex++, bIndex++)  {
-			//EXPECT_GE(angles[rightNeighbours[aIndex]], angles[i]);//all elements returned by partial query are right
-			while(rightNeighbours[aIndex] != allNeighbours[bIndex]) {//iterate over suppressed elements until next match
-				EXPECT_LT(angles[allNeighbours[bIndex]], angles[i]);//all elements suppressed are left
-				bIndex++;
-			}
-		}
-		EXPECT_EQ(aIndex, rightNeighbours.size());//all elements in partial query are also contained in complete query
-	}
-}
-
-TEST_F(QuadTreeGTest, tryTreeExport) {
-	count n = 200;
-	count capacity = 40;
-	double k = 10;
-	count m = n*k/2;
-	double targetR = HyperbolicSpace::getTargetRadius(n, m);
-
-	double R = HyperbolicSpace::hyperbolicAreaToRadius(n);
-	double r = HyperbolicSpace::hyperbolicRadiusToEuclidean(R);
-	double alpha = 0.7;
-
-	//allocate data structures
-	vector<double> angles(n), radii(n);
-
-	/**
-	 * generate values and construct quadtree
-	 */
-	HyperbolicSpace::fillPoints(angles, radii, targetR, alpha);
-	Quadtree<index> quad(HyperbolicSpace::hyperbolicRadiusToEuclidean(targetR), true, alpha, capacity);
-
-	for (index i = 0; i < n; i++) {
-		radii[i] = HyperbolicSpace::hyperbolicRadiusToEuclidean(radii[i]);
-		if (radii[i] == r) radii[i] = std::nextafter(radii[i], 0);
-		quad.addContent(i, angles[i], radii[i]);
-	}
-
-	EXPECT_EQ(quad.size(), n);
-
-	quad.indexSubtree(0);
-
-	count treeheight = quad.height();
-	DEBUG("Quadtree height: ", treeheight);
-	auto deg = [](double rad) -> double {return 180*rad/M_PI;};
-
-
-	index query = Aux::Random::integer(n-1);
-	radii[query] = HyperbolicSpace::hyperbolicRadiusToEuclidean(HyperbolicSpace::EuclideanRadiusToHyperbolic(radii[query])*0.75);
-	DEBUG("Query:", angles[query], ", ", radii[query]);
-	double T = 0.5;
-	double beta = 1/T;
-
-	auto edgeProb = [beta, targetR](double distance) -> double {return 1 / (exp(beta*(distance-targetR)/2)+1);};
-
-	std::stack<std::tuple<QuadNode<index>, count, double, double, index > > quadnodestack;
-	QuadNode<index> root = getRoot(quad);
-	quadnodestack.push(std::make_tuple(root, quad.height(), 0, 0, root.getID()));
-
-	while(!quadnodestack.empty()) {
-		auto currentTuple = quadnodestack.top();
-		quadnodestack.pop();
-		QuadNode<index> current;
-		count remainingHeight;
-		double xoffset, yoffset;
-		index parentID;
-		std::tie(current, remainingHeight, xoffset, yoffset, parentID) = currentTuple;
-
-		DEBUG("Quadtree Cell ", current.getID());
-		double probUB = edgeProb(current.hyperbolicDistances(angles[query], radii[query]).first);
-		DEBUG("\\drawQuadNode{",xoffset,"}{", yoffset, "}{", current.getID(), "}{", parentID, "}{", probUB, "}{", current.size(), "}");
-		DEBUG("\\drawCell{",deg(current.getLeftAngle()), "}{", deg(current.getRightAngle()),"}{", HyperbolicSpace::EuclideanRadiusToHyperbolic(current.getMinR()), "}{", HyperbolicSpace::EuclideanRadiusToHyperbolic(current.getMaxR()), "}");
-		DEBUG("Height: ", current.height());
-		auto distances = current.hyperbolicDistances(angles[query], radii[query]);
-		DEBUG("Mindistance to query:", distances.first);
-		DEBUG("ProbUB:", edgeProb(distances.first), " ProbLB:", edgeProb(distances.second));
-
-		if (current.height() == 1) {
-			index i = 0;
-			for (index elem : current.getElements()) {
-				i++;
-				double p = edgeProb(HyperbolicSpace::poincareMetric(angles[elem], radii[elem], angles[query], radii[query]));
-				DEBUG("\\drawPoint{", deg(angles[elem]), "}{", HyperbolicSpace::EuclideanRadiusToHyperbolic(radii[elem]), "}{", p, "}{", current.getID(), "}{", i, "}");
-				DEBUG("Leaf contains: ", angles[elem], ", ", radii[elem], " p: ", p);
-			}
-		}
-
-		double stepsize = pow(4, remainingHeight-1);
-		double newXOffset = xoffset-1.5*stepsize;
-		double newYOffset = yoffset + 1;
-		for (QuadNode<index> child : current.children) {
-			quadnodestack.push(std::make_tuple(child, remainingHeight-1, newXOffset, newYOffset, current.getID()));
-			newXOffset += stepsize;
-		}
-	}
-
-
-	DEBUG("\\drawQuery{", deg(angles[query]), "}{", HyperbolicSpace::EuclideanRadiusToHyperbolic(radii[query]),"}");
-
-}
+//TEST_F(QuadTreeGTest, tryTreeExport) {
+//	count n = 200;
+//	count capacity = 40;
+//	double k = 10;
+//	count m = n*k/2;
+//	double targetR = HyperbolicSpace::getTargetRadius(n, m);
+//
+//	double R = HyperbolicSpace::hyperbolicAreaToRadius(n);
+//	double r = HyperbolicSpace::hyperbolicRadiusToEuclidean(R);
+//	double alpha = 0.7;
+//
+//	//allocate data structures
+//	vector<double> angles(n), radii(n);
+//
+//	/**
+//	 * generate values and construct quadtree
+//	 */
+//	HyperbolicSpace::fillPoints(angles, radii, targetR, alpha);
+//	Quadtree<index> quad(HyperbolicSpace::hyperbolicRadiusToEuclidean(targetR), true, alpha, capacity);
+//
+//	for (index i = 0; i < n; i++) {
+//		radii[i] = HyperbolicSpace::hyperbolicRadiusToEuclidean(radii[i]);
+//		if (radii[i] == r) radii[i] = std::nextafter(radii[i], 0);
+//		quad.addContent(i, angles[i], radii[i]);
+//	}
+//
+//	EXPECT_EQ(quad.size(), n);
+//
+//	quad.indexSubtree(0);
+//
+//	count treeheight = quad.height();
+//	DEBUG("Quadtree height: ", treeheight);
+//	auto deg = [](double rad) -> double {return 180*rad/M_PI;};
+//
+//
+//	index query = Aux::Random::integer(n-1);
+//	radii[query] = HyperbolicSpace::hyperbolicRadiusToEuclidean(HyperbolicSpace::EuclideanRadiusToHyperbolic(radii[query])*0.75);
+//	DEBUG("Query:", angles[query], ", ", radii[query]);
+//	double T = 0.5;
+//	double beta = 1/T;
+//
+//	auto edgeProb = [beta, targetR](double distance) -> double {return 1 / (exp(beta*(distance-targetR)/2)+1);};
+//
+//	std::stack<std::tuple<QuadNode<index>, count, double, double, index > > quadnodestack;
+//	QuadNode<index> root = getRoot(quad);
+//	quadnodestack.push(std::make_tuple(root, quad.height(), 0, 0, root.getID()));
+//
+//	while(!quadnodestack.empty()) {
+//		auto currentTuple = quadnodestack.top();
+//		quadnodestack.pop();
+//		QuadNode<index> current;
+//		count remainingHeight;
+//		double xoffset, yoffset;
+//		index parentID;
+//		std::tie(current, remainingHeight, xoffset, yoffset, parentID) = currentTuple;
+//
+//		DEBUG("Quadtree Cell ", current.getID());
+//		double probUB = edgeProb(current.hyperbolicDistances(angles[query], radii[query]).first);
+//		DEBUG("\\drawQuadNode{",xoffset,"}{", yoffset, "}{", current.getID(), "}{", parentID, "}{", probUB, "}{", current.size(), "}");
+//		DEBUG("\\drawCell{",deg(current.getLeftAngle()), "}{", deg(current.getRightAngle()),"}{", HyperbolicSpace::EuclideanRadiusToHyperbolic(current.getMinR()), "}{", HyperbolicSpace::EuclideanRadiusToHyperbolic(current.getMaxR()), "}");
+//		DEBUG("Height: ", current.height());
+//		auto distances = current.hyperbolicDistances(angles[query], radii[query]);
+//		DEBUG("Mindistance to query:", distances.first);
+//		DEBUG("ProbUB:", edgeProb(distances.first), " ProbLB:", edgeProb(distances.second));
+//
+//		if (current.height() == 1) {
+//			index i = 0;
+//			for (index elem : current.getElements()) {
+//				i++;
+//				double p = edgeProb(HyperbolicSpace::poincareMetric(angles[elem], radii[elem], angles[query], radii[query]));
+//				DEBUG("\\drawPoint{", deg(angles[elem]), "}{", HyperbolicSpace::EuclideanRadiusToHyperbolic(radii[elem]), "}{", p, "}{", current.getID(), "}{", i, "}");
+//				DEBUG("Leaf contains: ", angles[elem], ", ", radii[elem], " p: ", p);
+//			}
+//		}
+//
+//		double stepsize = pow(4, remainingHeight-1);
+//		double newXOffset = xoffset-1.5*stepsize;
+//		double newYOffset = yoffset + 1;
+//		for (QuadNode<index> child : current.children) {
+//			quadnodestack.push(std::make_tuple(child, remainingHeight-1, newXOffset, newYOffset, current.getID()));
+//			newXOffset += stepsize;
+//		}
+//	}
+//
+//
+//	DEBUG("\\drawQuery{", deg(angles[query]), "}{", HyperbolicSpace::EuclideanRadiusToHyperbolic(radii[query]),"}");
+//
+//}
 
 TEST_F(QuadTreeGTest, testPolarEuclidQuery) {
 	/**
@@ -825,7 +737,7 @@ TEST_F(QuadTreeGTest, testQuadNodeHyperbolicDistances) {
 	double phi_q, r_q;
 	HyperbolicSpace::cartesianToPolar(query, phi_q, r_q);
 
-	QuadNode<index> node(minPhi, minR, maxPhi, maxR, 1000, 0);
+	QuadNode<index> node({minPhi, minR}, {maxPhi, maxR}, 1000);
 	count steps = 100;
 	Point2D<double> posAtMin = HyperbolicSpace::polarToCartesian(minPhi, minR);
 	double minDistance = HyperbolicSpace::poincareMetric(query, posAtMin);
@@ -838,9 +750,9 @@ TEST_F(QuadTreeGTest, testQuadNodeHyperbolicDistances) {
 		for (index j = 0; j <= steps; j++) {
 			double r =  HyperbolicSpace::hyperbolicRadiusToEuclidean(minR_Hyper + j*rStep);
 			if (i < steps && j < steps) {
-				EXPECT_TRUE(node.responsible(phi, r));
+				EXPECT_TRUE(node.responsible({phi, r}));
 			} else {
-				EXPECT_FALSE(node.responsible(phi, r));
+				EXPECT_FALSE(node.responsible({phi, r}));
 			}
 			Point2D<double> pos = HyperbolicSpace::polarToCartesian(phi, r);
 			double distance =  HyperbolicSpace::poincareMetric(query, pos);
@@ -859,8 +771,8 @@ TEST_F(QuadTreeGTest, testQuadNodeHyperbolicDistances) {
 	double phi, r;
 	HyperbolicSpace::cartesianToPolar(p, phi, r);
 
-	EXPECT_TRUE(node.responsible(phi, r));
-	double distanceQueryToCell = node.hyperbolicDistances(phi_q, r_q).first;
+	EXPECT_TRUE(node.responsible({phi, r}));
+	double distanceQueryToCell = node.hyperbolicPolarDistances({phi_q, r_q}, true).first;
 	double distanceQueryToPoint = HyperbolicSpace::poincareMetric(query, p);
 
 	//node.addContent(1, phi, r);

@@ -12,12 +12,20 @@
 #include <functional>
 #include <memory>
 
+#include "../../geometric/HyperbolicSpace.h"
+#include "../../auxiliary/Log.h"
+
 #include "../../viz/Point.h"
+
+using std::min;
+using std::max;
+using std::cos;
 
 namespace NetworKit {
 
 template <class T>
 class SpatialCell {
+	friend class QuadTreeGTest;
 public:
 	SpatialCell() = default;
 	virtual ~SpatialCell() = default;
@@ -28,9 +36,125 @@ public:
 
 	virtual void split() = 0;
 
+	void getCoordinates(vector<double> &anglesContainer, vector<double> &radiiContainer) const {
+		assert(minCoords.getDimensions() == 2);
+		if (this->isLeaf) {
+			for (Point<double> pos : positions) {
+				anglesContainer.push_back(pos[0]);
+				radiiContainer.push_back(pos[1]);
+			}
+		}
+		else {
+			assert(this->content.size() == 0);
+
+			for (index i = 0; i < children.size(); i++) {
+				this->children[i]->getCoordinates(anglesContainer, radiiContainer);
+			}
+		}
+	}
+
+	virtual void coarsen() {
+		assert(this->height() == 2);
+		assert(content.size() == 0);
+		assert(positions.size() == 0);
+
+		vector<T> allContent;
+		vector<Point<double> > allPositions;
+		for (index i = 0; i < this->children.size(); i++) {
+			allContent.insert(allContent.end(), children[i]->content.begin(), children[i]->content.end());
+			allPositions.insert(allPositions.end(), children[i]->positions.begin(), children[i]->positions.end());
+		}
+		assert(this->subTreeSize == allContent.size());
+		assert(this->subTreeSize == allPositions.size());
+
+		this->children.clear();
+		this->content.swap(allContent);
+		this->positions.swap(allPositions);
+		this->isLeaf = true;
+	}
+
+	/**
+	 * Remove content at polar coordinates (angle, R). May cause coarsening of the quadtree
+	 *
+	 * @param input Content to be removed
+	 * @param angle Angular coordinate
+	 * @param R Radial coordinate
+	 *
+	 * @return True if content was found and removed, false otherwise
+	 */
+	bool removeContent(T input, const Point<double> &pos) {
+		if (!this->responsible(pos)) return false;
+		if (this->isLeaf) {
+			index i = 0;
+			for (; i < this->content.size(); i++) {
+				if (this->content[i] == input) break;
+			}
+			if (i < this->content.size()) {
+				//remove element
+				this->content.erase(this->content.begin()+i);
+				this->positions.erase(this->positions.begin()+i);
+				return true;
+			} else {
+				return false;
+			}
+		}
+		else {
+			bool removed = false;
+			bool allLeaves = true;
+			assert(this->children.size() > 0);
+			for (index i = 0; i < children.size(); i++) {
+				if (!children[i]->isLeaf) allLeaves = false;
+				if (children[i]->removeContent(input, pos)) {
+					assert(!removed);
+					removed = true;
+				}
+			}
+			if (removed) this->subTreeSize--;
+			//coarsen?
+			if (removed && allLeaves && this->size() < this->coarsenLimit) {
+				this->coarsen();
+			}
+
+			return removed;
+		}
+	}
+
+	void recount() {
+		this->subTreeSize = 0;
+		for (index i = 0; i < children.size(); i++) {
+			this->children[i]->recount();
+			this->subTreeSize += this->children[i]->size();
+		}
+	}
+
+
 	virtual std::pair<double, double> distances(const Point<double> &query) const = 0;
 
 	virtual double distance(const Point<double> &query, index k) const = 0;
+
+	virtual bool outOfReach(Point<double> query, double radius) const {
+		return distances(query).first > radius;
+	}
+
+	virtual void getElementsInCircle(Point<double> center, double radius, vector<T> &result) const {
+		if (outOfReach(center, radius)) {
+			return;
+		}
+
+		if (this->isLeaf) {
+			const count cSize = content.size();
+
+			for (index i = 0; i < cSize; i++) {
+				if (distance(center, i) < radius) {
+					result.push_back((content[i]));
+				}
+			}
+		} else {
+			for (index i = 0; i < children.size(); i++) {
+				children[i]->getElementsInCircle(center, radius, result);
+			}
+		}
+	}
 
 	virtual void addContent(T input, Point<double> coords) {
 		assert(content.size() == positions.size());
@@ -90,7 +214,7 @@ public:
 		}
 	}
 
-	virtual count getElementsProbabilistically(const Point<double> &query, std::function<double(double)> prob, vector<T> &result) const {
+	virtual count getElementsProbabilistically(const Point<double> &query, std::function<double(double)> prob, std::vector<T> &result) const {
 		auto distancePair = distances(query);
 		double probUB = prob(distancePair.first);
 		double probLB = prob(distancePair.second);
@@ -188,6 +312,184 @@ public:
 			}
 		}
 
+	//actually, move this thing to hyperbolic space
+	std::pair<double, double> hyperbolicPolarDistances(Point<double> query, bool poincare) const {
+		double phi = query[0];
+		double r = query[1];
+
+		double leftAngle = this->minCoords[0];
+		double minR = this->minCoords[1];
+		double rightAngle = this->maxCoords[0];
+		double maxR = this->maxCoords[1];
+
+		assert(leftAngle >= 0);
+		assert(rightAngle <= 2*M_PI);
+		assert(leftAngle < rightAngle);
+
+		assert(minR >= 0);
+		assert(maxR > minR);
+		assert(phi >= 0);
+		assert(phi < 2*M_PI);
+		assert(r > 0);
+
+		double minRHyper, maxRHyper, r_h;
+		if (poincare) {
+			minRHyper=HyperbolicSpace::EuclideanRadiusToHyperbolic(minR);
+			maxRHyper=HyperbolicSpace::EuclideanRadiusToHyperbolic(maxR);
+			r_h = HyperbolicSpace::EuclideanRadiusToHyperbolic(r);
+		} else {
+			minRHyper=minR;
+			maxRHyper=maxR;
+			r_h = r;
+		}
+
+		double coshr = cosh(r_h);
+		double sinhr = sinh(r_h);
+		double coshMinR = cosh(minRHyper);
+		double coshMaxR = cosh(maxRHyper);
+		double sinhMinR = sinh(minRHyper);
+		double sinhMaxR = sinh(maxRHyper);
+		double cosDiffLeft = cos(phi - leftAngle);
+		double cosDiffRight = cos(phi - rightAngle);
+
+		/**
+		 * If the query point is not within the quadnode, the distance minimum is on the border.
+		 * Need to check whether extremum is between corners:
+		 */
+
+		double coshMinDistance, coshMaxDistance;
+
+		//Left border
+		double lowerLeftDistance = coshMinR*coshr-sinhMinR*sinhr*cosDiffLeft;
+		double upperLeftDistance = coshMaxR*coshr-sinhMaxR*sinhr*cosDiffLeft;
+		if (this->responsible(query)) coshMinDistance = 1; //strictly speaking, this is wrong
+		else coshMinDistance = min(lowerLeftDistance, upperLeftDistance);
+
+		coshMaxDistance = max(lowerLeftDistance, upperLeftDistance);
+		//double a = cosh(r_h);
+		double b, extremum;
+
+		if (phi != leftAngle) {
+			b = sinhr*cosDiffLeft;
+			extremum = log((coshr+b)/(coshr-b))/2;
+			if (extremum < maxRHyper && extremum >= minRHyper) {
+				double extremeDistance = cosh(extremum)*coshr-sinh(extremum)*sinhr*cosDiffLeft;
+				coshMinDistance = min(coshMinDistance, extremeDistance);
+				coshMaxDistance = max(coshMaxDistance, extremeDistance);
+			}
+		} else {
+			coshMinDistance = 1;
+		}
+
+		/**
+		 * cosh is a function from [0,\infty) to [1, \infty)
+		 * Variables thus need
+		 */
+		assert(coshMaxDistance >= 1);
+		assert(coshMinDistance >= 1);
+
+		//Right border
+		double lowerRightDistance = coshMinR*coshr-sinhMinR*sinhr*cosDiffRight;
+		double upperRightDistance = coshMaxR*coshr-sinhMaxR*sinhr*cosDiffRight;
+		coshMinDistance = min(coshMinDistance, lowerRightDistance);
+		coshMinDistance = min(coshMinDistance, upperRightDistance);
+		coshMaxDistance = max(coshMaxDistance, lowerRightDistance);
+		coshMaxDistance = max(coshMaxDistance, upperRightDistance);
+
+		assert(coshMaxDistance >= 1);
+		assert(coshMinDistance >= 1);
+
+		if (phi != rightAngle) {
+			b = sinhr*cosDiffRight;
+			extremum = log((coshr+b)/(coshr-b))/2;
+			if (extremum < maxRHyper && extremum >= minRHyper) {
+				double extremeDistance = cosh(extremum)*coshr-sinh(extremum)*sinhr*cosDiffRight;
+				coshMinDistance = min(coshMinDistance, extremeDistance);
+				coshMaxDistance = max(coshMaxDistance, extremeDistance);
+			}
+		} else {
+			coshMinDistance = 1;
+		}
+
+		assert(coshMaxDistance >= 1);
+		assert(coshMinDistance >= 1);
+
+		//upper and lower borders
+		if (phi >= leftAngle && phi < rightAngle) {
+			double lower = cosh(abs(r_h-minRHyper));
+			double upper = cosh(abs(r_h-maxRHyper));
+			coshMinDistance = min(coshMinDistance, lower);
+			coshMinDistance = min(coshMinDistance, upper);
+			coshMaxDistance = max(coshMaxDistance, upper);
+			coshMaxDistance = max(coshMaxDistance, lower);
+		}
+
+		assert(coshMaxDistance >= 1);
+		assert(coshMinDistance >= 1);
+
+		//again with mirrored phi
+		double mirrorphi;
+		if (phi >= M_PI) mirrorphi = phi - M_PI;
+		else mirrorphi = phi + M_PI;
+		if (mirrorphi >= leftAngle && mirrorphi < rightAngle) {
+			double lower = coshMinR*coshr+sinhMinR*sinhr;
+			double upper = coshMaxR*coshr+sinhMaxR*sinhr;
+			coshMinDistance = min(coshMinDistance, lower);
+			coshMinDistance = min(coshMinDistance, upper);
+			coshMaxDistance = max(coshMaxDistance, upper);
+			coshMaxDistance = max(coshMaxDistance, lower);
+		}
+
+		assert(coshMaxDistance >= 1);
+		assert(coshMinDistance >= 1);
+
+		double minDistance, maxDistance;
+		minDistance = acosh(coshMinDistance);
+		maxDistance = acosh(coshMaxDistance);
+		assert(maxDistance >= 0);
+		assert(minDistance >= 0);
+		return std::pair<double, double>(minDistance, maxDistance);
+	}
+
+	/**
+	 * Get all Elements in this QuadNode or a descendant of it
+	 *
+	 * @return vector of content type T
+	 */
+	std::vector<T> getElements() const {
+		if (isLeaf) {
+			return content;
+		} else {
+			assert(content.size() == 0);
+			assert(positions.size() == 0);
+
+			std::vector<T> result;
+			for (index i = 0; i < children.size(); i++) {
+				std::vector<T> subresult = children[i]->getElements();
+				result.insert(result.end(), subresult.begin(), subresult.end());
+			}
+			return result;
+		}
+	}
+
+	count height() const {
+		count result = 1;//if leaf node, the children loop will not execute
+		for (auto child : children) result = std::max(result, child->height()+1);
+		return result;
+	}
+
+	/**
+	 * Leaf cells in the subtree hanging from this QuadNode
+	 */
+	count countLeaves() const {
+		if (isLeaf) return 1;
+		count result = 0;
+		for (index i = 0; i < children.size(); i++) {
+			result += children[i]->countLeaves();
+		}
+		return result;
+	}
+
 protected:
 	Point<double> minCoords;
 	Point<double> maxCoords;
@@ -197,6 +499,9 @@ protected:
 	bool isLeaf;
 	count capacity;
 	index subTreeSize;
+
+private:
+	static const unsigned coarsenLimit = 4;
 };
 
 } /* namespace NetworKit */

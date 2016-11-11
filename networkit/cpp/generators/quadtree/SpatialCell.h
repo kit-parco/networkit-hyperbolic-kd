@@ -32,9 +32,12 @@ public:
 	SpatialCell(const Point<double> &minCoords, const Point<double> &maxCoords, count capacity=1000) : minCoords(minCoords), maxCoords(maxCoords), capacity(capacity) {
 		isLeaf = true;
 		subTreeSize = 0;
+		ID = 0;
 	}
 
 	virtual void split() = 0;
+	virtual std::pair<double, double> distances(const Point<double> &query) const = 0;
+	virtual double distance(const Point<double> &query, index k) const = 0;
 
 	void getCoordinates(vector<double> &anglesContainer, vector<double> &radiiContainer) const {
 		assert(minCoords.getDimensions() == 2);
@@ -126,11 +129,6 @@ public:
 			this->subTreeSize += this->children[i]->size();
 		}
 	}
-
-
-	virtual std::pair<double, double> distances(const Point<double> &query) const = 0;
-
-	virtual double distance(const Point<double> &query, index k) const = 0;
 
 	virtual bool outOfReach(Point<double> query, double radius) const {
 		return distances(query).first > radius;
@@ -490,6 +488,62 @@ public:
 		return result;
 	}
 
+	index getID() const {
+			return ID;
+		}
+
+
+	index indexSubtree(index nextID) {
+		index result = nextID;
+		assert(this->children.size() == 4 || this->children.size() == 0);
+		for (int i = 0; i < this->children.size(); i++) {
+			result = this->children[i]->indexSubtree(result);
+		}
+		this->ID = result;
+		return result+1;
+	}
+
+	index getCellID(const Point<double> query) const {
+		if (!this->responsible(query)) return -1;
+		if (this->isLeaf) return getID();
+		else {
+			for (int i = 0; i < 4; i++) {
+				index childresult = this->children[i]->getCellID(query);
+				if (childresult >= 0) return childresult;
+			}
+			assert(false); //if responsible
+			return -1;
+		}
+	}
+
+	index getMaxIDInSubtree() const {
+		if (this->isLeaf) return getID();
+		else {
+			index result = -1;
+			for (int i = 0; i < 4; i++) {
+				result = std::max(this->children[i]->getMaxIDInSubtree(), result);
+			}
+			return std::max(result, getID());
+		}
+	}
+
+	count reindex(count offset) {
+		if (this->isLeaf)
+		{
+			#pragma omp task
+			{
+				index p = offset;
+				std::generate(this->content.begin(), this->content.end(), [&p](){return p++;});
+			}
+			offset += this->size();
+		} else {
+			for (int i = 0; i < 4; i++) {
+				offset = this->children[i]->reindex(offset);
+			}
+		}
+		return offset;
+	}
+
 protected:
 	Point<double> minCoords;
 	Point<double> maxCoords;
@@ -499,6 +553,7 @@ protected:
 	bool isLeaf;
 	count capacity;
 	index subTreeSize;
+	index ID;
 
 private:
 	static const unsigned coarsenLimit = 4;

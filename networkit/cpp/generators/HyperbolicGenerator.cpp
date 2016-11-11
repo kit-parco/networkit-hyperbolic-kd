@@ -29,6 +29,7 @@
 #include "../graph/GraphBuilder.h"
 #include "HyperbolicGenerator.h"
 #include "quadtree/Quadtree.h"
+#include "quadtree/KDTree.h"
 #include "../auxiliary/Random.h"
 #include "../auxiliary/Parallel.h"
 
@@ -225,6 +226,7 @@ Graph HyperbolicGenerator::generate(const vector<double> &angles, const vector<d
 
 	assert(alpha > 0);
 	Quadtree<index,false> quad(R, theoreticalSplit, alpha, capacity, balance);
+	//KDTree<index, false> quad({0,0}, {2*M_PI, R}, capacity);
 
 	for (index i = 0; i < n; i++) {
 		assert(radii[i] < R);

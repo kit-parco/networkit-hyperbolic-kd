@@ -225,7 +225,7 @@ TEST_F(GeneratorsBenchmark, benchmarkSequentialQuadtreeConstruction) {
 }
 
 TEST_F(GeneratorsBenchmark, benchmarkHyperbolicGeneratorMechanicGraphs) {
-	count n = 1000000;
+	count n = 10000;
 	double k = 6;
 	count m = n*k/2;
 	HyperbolicGenerator gen(n, k, 3, 0.14);

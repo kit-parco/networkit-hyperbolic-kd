@@ -102,7 +102,7 @@ public:
 	}
 
 	void getElementsInEuclideanCircle(const Point<double> circleCenter, const double radius, vector<T> &circleDenizens) const {
-		root.getElementsInEuclideanCircle(circleCenter, radius, circleDenizens);
+		root.getElementsInCircle(circleCenter, radius, circleDenizens);
 	}
 
 	template<typename L>

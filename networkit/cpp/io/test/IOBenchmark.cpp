@@ -157,7 +157,7 @@ TEST_F(IOBenchmark, benchRasterReader) {
 			for (uint64_t q = 0; q < numQueries; ++q) {
 				vector<index> result;
 				index comparison = Aux::Random::integer(xcoords.size());
-				Point2D<double> query(xcoords[comparison], ycoords[comparison]);
+				Point<double> query({xcoords[comparison], ycoords[comparison]});
 				tree.getElementsProbabilistically(query, edgeProb, result);
 				treeTotalNeighbours += result.size();
 			}
@@ -269,7 +269,7 @@ TEST_F(IOBenchmark, simulateDiseaseProgression) {
 			//get new infections
 			vector<index> newInfections;
 			for (index patient : infectedList) {
-				Point2D<double> query(xcoords[patient], ycoords[patient]);
+				Point<double> query({xcoords[patient], ycoords[patient]});
 				tree.getElementsProbabilistically(query, edgeProb, newInfections);
 			}
 

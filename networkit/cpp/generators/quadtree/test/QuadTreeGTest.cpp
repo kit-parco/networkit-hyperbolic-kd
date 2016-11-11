@@ -666,7 +666,7 @@ TEST_F(QuadTreeGTest, testPolarEuclidQuery) {
 		double acc = Aux::Random::probability() ;
 		auto edgeProb = [acc](double distance) -> double {return acc;};
 		vector<index> near;
-		tree.getElementsProbabilistically(HyperbolicSpace::polarToCartesian(angles[query], radii[query]), edgeProb, near);
+		tree.getElementsProbabilistically({angles[query], radii[query]}, edgeProb, near);
 		EXPECT_NEAR(near.size(), acc*n, std::max(acc*n*0.25, 10.0));
 	}
 
@@ -674,12 +674,12 @@ TEST_F(QuadTreeGTest, testPolarEuclidQuery) {
 
 	auto edgeProb = [](double distance) -> double {return 1;};
 	vector<index> near;
-	tree.getElementsProbabilistically(HyperbolicSpace::polarToCartesian(angles[0], radii[0]), edgeProb, near);
+	tree.getElementsProbabilistically({angles[0], radii[0]}, edgeProb, near);
 	EXPECT_EQ(n, near.size());
 
 	auto edgeProb2 = [](double distance) -> double {return 0;};
 	near.clear();
-	tree.getElementsProbabilistically(HyperbolicSpace::polarToCartesian(angles[0], radii[0]), edgeProb2, near);
+	tree.getElementsProbabilistically({angles[0], radii[0]}, edgeProb2, near);
 	EXPECT_EQ(0, near.size());
 }
 
@@ -725,6 +725,23 @@ TEST_F(QuadTreeGTest, testQuadTreePolarEuclidInsertion) {
 	for (index i = 0; i < returned.size(); i++) {
 		EXPECT_EQ(i, returned[i]);
 	}
+}
+
+TEST_F(QuadTreeGTest, testQuadNodePolarEuclidDistanceBounds) {
+	Point<double> query = {3.81656, 1.18321};
+	Point<double> lowerLeft = {1.5708, 0};
+	Point<double> upperRight = {2.35619, 0.706942};
+	Point<double> interior = {2.35602,0.129449};
+	Point<double> projected = {2.35619,0.129449};
+
+	QuadNodePolarEuclid<index> testNode(lowerLeft, upperRight);
+	ASSERT_TRUE(testNode.responsible(interior));
+	EXPECT_LE(testNode.EuclideanDistances(query).first, testNode.euclidDistancePolar(query[0], query[1], interior[0], interior[1]));
+
+	EXPECT_LE(testNode.EuclideanDistances(query).first, testNode.euclidDistancePolar(1.5708, 0, 3.81656, 1.18321));
+	EXPECT_LE(testNode.EuclideanDistances(query).first, testNode.euclidDistancePolar(2.35619, 0.706942, 3.81656, 1.18321));
+	EXPECT_LE(testNode.EuclideanDistances(query).first, testNode.euclidDistancePolar(1.5708, 0.706942, 3.81656, 1.18321));
+	EXPECT_LE(testNode.EuclideanDistances(query).first, testNode.euclidDistancePolar(1.5708, 0.706942, 3.81656, 1.18321));
 }
 
 TEST_F(QuadTreeGTest, testQuadNodeHyperbolicDistances) {

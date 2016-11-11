@@ -33,8 +33,8 @@ public:
 	 * @param capacity How many points can inhabit a leaf cell before it is split up?
 	 *
 	 */
-	QuadtreePolarEuclid(double maxR,bool theoreticalSplit=false, double alpha=1, count capacity=1000, double balance = 0.5) {
-		root = QuadNodePolarEuclid<T>(0, 0, 2*M_PI, maxR, capacity, 0,theoreticalSplit,alpha,balance);
+	QuadtreePolarEuclid(double maxR,bool theoreticalSplit=false, count capacity=1000, double balance = 0.5) {
+		root = QuadNodePolarEuclid<T>({0, 0}, {2*M_PI, maxR}, capacity, theoreticalSplit, balance);
 		this->maxRadius = maxR;
 	}
 
@@ -47,10 +47,10 @@ public:
 			if (radius > maxRadius) maxRadius = radius;
 		}
 		maxRadius = std::nextafter(maxRadius, std::numeric_limits<double>::max());
-		root = QuadNodePolarEuclid<T>(0, 0, 2*M_PI, maxRadius, capacity, theoreticalSplit,balance);
+		root = QuadNodePolarEuclid<T>({0, 0}, {2*M_PI, maxRadius}, capacity, theoreticalSplit,balance);
 		for (index i = 0; i < n; i++) {
 			assert(content[i] < n);
-			root.addContent(content[i], angles[i], radii[i]);
+			root.addContent(content[i], {angles[i], radii[i]});
 		}
 	}
 
@@ -60,7 +60,7 @@ public:
 	 * @param R radial coordinate of x
 	 */
 	void addContent(T newcomer, double angle, double r) {
-		root.addContent(newcomer, angle, r);
+		root.addContent(newcomer, {angle, r});
 	}
 
 	/**
@@ -69,7 +69,7 @@ public:
 	 * @param R radial coordinate of x
 	 */
 	bool removeContent(T toRemove, double angle, double r) {
-		return root.removeContent(toRemove, angle, r);
+		return root.removeContent(toRemove, {angle, r});
 	}
 
 	/**
@@ -85,16 +85,12 @@ public:
 		root.getCoordinates(anglesContainer, radiiContainer);
 	}
 
-	void getElementsInEuclideanCircle(const Point2D<double> circleCenter, const double radius, vector<T> &circleDenizens) const {
-		root.getElementsInEuclideanCircle(circleCenter, radius, false, circleDenizens);
+	void getElementsInEuclideanCircle(const Point<double> circleCenter, const double radius, vector<T> &circleDenizens) const {
+		root.getElementsInCircle(circleCenter, radius, circleDenizens);
 	}
 
-	count getElementsProbabilistically(Point2D<double> euQuery, std::function<double(double)> prob, vector<T> &circleDenizens) {
-		return root.getElementsProbabilistically(euQuery, prob, false, circleDenizens);
-	}
-
-	count getElementsProbabilistically(Point2D<double> euQuery, std::function<double(double)> prob, bool suppressLeft, vector<T> &circleDenizens) {
-		return root.getElementsProbabilistically(euQuery, prob, suppressLeft, circleDenizens);
+	count getElementsProbabilistically(Point<double> query, std::function<double(double)> prob, vector<T> &circleDenizens) {
+		return root.getElementsProbabilistically(query, prob, circleDenizens);
 	}
 
 	void recount() {

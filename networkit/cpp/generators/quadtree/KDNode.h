@@ -106,9 +106,6 @@ public:
 		}
 		return result;
 	}
-
-private:
-
 };
 
 } /* namespace NetworKit */

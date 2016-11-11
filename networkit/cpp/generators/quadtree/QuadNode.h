@@ -161,64 +161,6 @@ public:
 	double getMaxR() const {
 		return this->maxCoords[1];
 	}
-
-	index getID() const {
-		return ID;
-	}
-
-	/**
-	index indexSubtree(index nextID) {
-		index result = nextID;
-		assert(this->children.size() == 4 || this->children.size() == 0);
-		for (int i = 0; i < this->children.size(); i++) {
-			result = this->children[i]->indexSubtree(result);
-		}
-		this->ID = result;
-		return result+1;
-	}
-
-	index getCellID(const Point<double> query) const {
-		if (!this->responsible(query)) return -1;
-		if (this->isLeaf) return getID();
-		else {
-			for (int i = 0; i < 4; i++) {
-				index childresult = this->children[i]->getCellID(query);
-				if (childresult >= 0) return childresult;
-			}
-			assert(false); //if responsible
-			return -1;
-		}
-	}
-
-	index getMaxIDInSubtree() const {
-		if (this->isLeaf) return getID();
-		else {
-			index result = -1;
-			for (int i = 0; i < 4; i++) {
-				result = std::max(this->children[i]->getMaxIDInSubtree(), result);
-			}
-			return std::max(result, getID());
-		}
-	}
-
-	count reindex(count offset) {
-		if (this->isLeaf)
-		{
-			#pragma omp task
-			{
-				index p = offset;
-				std::generate(this->content.begin(), this->content.end(), [&p](){return p++;});
-			}
-			offset += this->size();
-		} else {
-			for (int i = 0; i < 4; i++) {
-				offset = this->children[i]->reindex(offset);
-			}
-		}
-		return offset;
-	}
-	*/
-
 };
 }
 

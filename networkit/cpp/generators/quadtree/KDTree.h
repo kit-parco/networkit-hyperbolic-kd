@@ -30,6 +30,15 @@ public:
 		root.addContent(content, coords);
 	}
 
+	/**
+	 * @param newcomer content to be added at point x
+	 * @param angle angular coordinate of x
+	 * @param R radial coordinate of x
+	 */
+	void addContent(T content, double angle, double r) {
+		root.addContent(content, {angle, r});
+	}
+
 	void getElementsInEuclideanCircle(const Point<double> query, const double radius, vector<T> &circleDenizens) const {
 		root.getElementsInEuclideanCircle(query, radius, circleDenizens);
 	}

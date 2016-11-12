@@ -29,7 +29,7 @@
 #include "../graph/GraphBuilder.h"
 #include "HyperbolicGenerator.h"
 #include "quadtree/Quadtree.h"
-#include "quadtree/KDTree.h"
+#include "quadtree/KDTreeHyperbolic.h"
 #include "../auxiliary/Random.h"
 #include "../auxiliary/Parallel.h"
 

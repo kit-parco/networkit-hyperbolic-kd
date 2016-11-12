@@ -38,29 +38,13 @@ public:
 	 * Construct a QuadNode for polar coordinates.
 	 *
 	 *
-	 * @param leftAngle Minimal angular coordinate of region, in radians from 0 to 2\pi
-	 * @param rightAngle Maximal angular coordinate of region, in radians from 0 to 2\pi
-	 * @param minR Minimal radial coordinate of region, between 0 and 1
-	 * @param maxR Maximal radial coordinate of region, between 0 and 1
-	 * @param capacity Number of points a leaf cell can store before splitting
-	 * @param minDiameter Minimal diameter of a quadtree node. If the node is already smaller, don't split even if over capacity. Default is 0
-	 * @param splitTheoretical Whether to split in a theoretically optimal way or in a way to decrease measured running times
-	 * @param alpha dispersion Parameter of the point distribution. Only has an effect if theoretical split is true
-	 * @param diagnostics Count how many necessary and unnecessary comparisons happen in leaf cells? Will cause race condition and false sharing in parallel use
-	 *
 	 */
-	QuadNodePolarEuclid(Point<double> minCoords = {0,0}, Point<double> maxCoords = {2*M_PI, 1}, unsigned capacity = 1000, bool splitTheoretical = false, double balance = 0.5) {
+	QuadNodePolarEuclid(Point<double> minCoords = {0,0}, Point<double> maxCoords = {2*M_PI, 1}, unsigned capacity = 1000, bool splitTheoretical = false, double balance = 0.5)
+	: SpatialCell<T>(minCoords, maxCoords, capacity) {
 		if (balance <= 0 || balance >= 1) throw std::runtime_error("Quadtree balance parameter must be between 0 and 1.");
 		if (minCoords.getDimensions() != 2) throw std::runtime_error("Currently only supported for two dimensions");
 		this->balance = balance;
-		this->minCoords = minCoords;
-		this->maxCoords = maxCoords;
-		assert(this->maxCoords.getDimensions() == this->minCoords.getDimensions());
-		this->capacity = capacity;
 		this->splitTheoretical = splitTheoretical;
-		this->ID = 0;
-		this->subTreeSize = 0;
-		this->isLeaf = true;
 	}
 
 	void split() {
@@ -103,89 +87,11 @@ public:
 	}
 
 	virtual std::pair<double, double> distances(const Point<double> &query) const override {
-		return EuclideanDistances(query);
+		return this->EuclideanPolarDistances(query);
 	}
 
 	virtual double distance(const Point<double> &query, index k) const override {
-		return euclidDistancePolar(query[0], query[1], this->positions[k][0], this->positions[k][1]);
-	}
-
-	static double euclidDistancePolar(double phi_a, double r_a, double phi_b, double r_b){
-		return pow(r_a*r_a+r_b*r_b-2*r_a*r_b*cos(phi_a-phi_b), 0.5);
-	}
-
-	/**
-	 * @param phi Angular coordinate of query point
-	 * @param r_h radial coordinate of query point
-	 */
-	std::pair<double, double> EuclideanDistances(Point<double> query) const {
-		const double phi = query[0];
-		const double r = query[1];
-		const double leftAngle = this->minCoords[0];
-		const double rightAngle = this->maxCoords[0];
-		const double minR = this->minCoords[1];
-		const double maxR = this->maxCoords[1];
-		/**
-		 * If the query point is not within the quadnode, the distance minimum is on the border.
-		 * Need to check whether extremum is between corners.
-		 */
-		double maxDistance = 0;
-		double minDistance = std::numeric_limits<double>::max();
-
-		if (this->responsible(query)) minDistance = 0;
-
-		auto updateMinMax = [&minDistance, &maxDistance, phi, r](double phi_b, double r_b){
-			double extremalValue = euclidDistancePolar(phi, r, phi_b, r_b);
-			//assert(extremalValue <= r + r_b);
-			maxDistance = std::max(extremalValue, maxDistance);
-			minDistance = std::min(minDistance, extremalValue);
-		};
-
-		/**
-		 * angular boundaries
-		 */
-		//left
-		double extremum = r*cos(leftAngle - phi);
-		if (extremum < maxR && extremum > minR) {
-			updateMinMax(leftAngle, extremum);
-		}
-
-		//right
-		extremum = r*cos(rightAngle - phi);
-		if (extremum < maxR && extremum > minR) {
-			updateMinMax(rightAngle, extremum);
-		}
-
-
-		/**
-		 * radial boundaries.
-		 */
-		if (phi > leftAngle && phi < rightAngle) {
-			updateMinMax(phi, maxR);
-			updateMinMax(phi, minR);
-		}
-		if (phi + M_PI > leftAngle && phi + M_PI < rightAngle) {
-			updateMinMax(phi + M_PI, maxR);
-			updateMinMax(phi + M_PI, minR);
-		}
-		if (phi - M_PI > leftAngle && phi -M_PI < rightAngle) {
-			updateMinMax(phi - M_PI, maxR);
-			updateMinMax(phi - M_PI, minR);
-		}
-
-		/**
-		 * corners
-		 */
-		updateMinMax(leftAngle, maxR);
-		updateMinMax(rightAngle, maxR);
-		updateMinMax(leftAngle, minR);
-		updateMinMax(rightAngle, minR);
-
-		//double shortCutGainMax = maxR + r - maxDistance;
-		//assert(minDistance <= minR + r);
-		//assert(maxDistance <= maxR + r);
-		assert(minDistance < maxDistance);
-		return std::pair<double, double>(minDistance, maxDistance);
+		return this->euclidDistancePolar(query[0], query[1], this->positions[k][0], this->positions[k][1]);
 	}
 };
 }

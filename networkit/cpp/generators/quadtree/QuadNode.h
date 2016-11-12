@@ -71,21 +71,16 @@ public:
 	 * @param balance
 	 *
 	 */
-	QuadNode(const Point<double> &minCoords, const Point<double> &maxCoords, count capacity=1000, bool splitTheoretical = false, double alpha = 1, double balance = 0.5) {
+	QuadNode(const Point<double> &minCoords, const Point<double> &maxCoords, count capacity=1000, bool splitTheoretical = false, double alpha = 1, double balance = 0.5)
+	: SpatialCell<T>(minCoords, maxCoords, capacity) {
 		if (minCoords.getDimensions() != 2) throw std::runtime_error("Quadnode currently only supported for 2D");
 		if (maxCoords.getDimensions() != 2) throw std::runtime_error("Quadnode currently only supported for 2D");
 		if (poincare && maxCoords[1] >= 1) throw std::runtime_error("The Poincare disk has a radius of 1, cannot create quadtree larger than that!");
-		this->isLeaf = true;
-		this->subTreeSize = 0;
-		this->minCoords = minCoords;
-		this->maxCoords = maxCoords;
-		this->capacity = capacity;
+		if (balance <= 0 || balance >= 1) throw std::runtime_error("Quadtree balance parameter must be between 0 and 1.");
+
 		this->alpha = alpha;
 		this->splitTheoretical = splitTheoretical;
 		this->balance = balance;
-		this->ID = 0;
-		if (balance <= 0 || balance >= 1) throw std::runtime_error("Quadtree balance parameter must be between 0 and 1.");
-
 	}
 
 	void split() {

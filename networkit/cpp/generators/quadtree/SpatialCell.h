@@ -30,6 +30,15 @@ public:
 	SpatialCell() = default;
 	virtual ~SpatialCell() = default;
 	SpatialCell(const Point<double> &minCoords, const Point<double> &maxCoords, count capacity=1000) : minCoords(minCoords), maxCoords(maxCoords), capacity(capacity) {
+		const count dimension = minCoords.getDimensions();
+		if (maxCoords.getDimensions() != dimension) {
+			throw std::runtime_error("minCoords has dimension " + std::to_string(dimension) + ", maxCoords " + std::to_string(maxCoords.getDimensions()));
+		}
+		for (index i = 0; i < dimension; i++) {
+			if (!(minCoords[i] < maxCoords[i])) {
+				throw std::runtime_error("minCoords["+std::to_string(i)+("]="+std::to_string(minCoords[i])+" not < "+std::to_string(maxCoords[i])+"=maxCoords["+std::to_string(i)+"]"));
+			}
+		}
 		isLeaf = true;
 		subTreeSize = 0;
 		ID = 0;
@@ -216,6 +225,9 @@ public:
 		auto distancePair = distances(query);
 		double probUB = prob(distancePair.first);
 		double probLB = prob(distancePair.second);
+		if (probUB > 1) {
+			throw std::runtime_error("f("+std::to_string(distancePair.first)+")="+std::to_string(probUB)+" is not a probability!");
+		}
 		assert(probLB <= probUB);
 		if (probUB > 0.5) probUB = 1;//if we are going to take every second element anyway, no use in calculating expensive jumps
 		if (probUB == 0) return 0;
@@ -249,8 +261,12 @@ public:
 				candidatesTested++;
 				double dist = distance(query, i);
 				assert(dist >= distancePair.first);
+				assert(dist <= distancePair.second);
 
 				double q = prob(dist);
+				if (q > probUB) {
+					throw std::runtime_error("Probability function is not monotonically decreasing: f(" + std::to_string(dist) + ")="+std::to_string(q)+">"+std::to_string(probUB)+"=f("+std::to_string(distancePair.first)+").");
+				}
 				q = q / probUB; //since the candidate was selected by the jumping process, we have to adjust the probabilities
 				assert(q <= 1);
 				assert(q >= 0);
@@ -446,6 +462,125 @@ public:
 		maxDistance = acosh(coshMaxDistance);
 		assert(maxDistance >= 0);
 		assert(minDistance >= 0);
+		return std::pair<double, double>(minDistance, maxDistance);
+	}
+
+	static double euclidDistancePolar(double phi_a, double r_a, double phi_b, double r_b){
+			return pow(r_a*r_a+r_b*r_b-2*r_a*r_b*cos(phi_a-phi_b), 0.5);
+		}
+
+	std::pair<double, double> EuclideanPolarDistances(Point<double> query) const {
+		assert(query.getDimensions() == 2);
+		assert(minCoords.getDimensions() == 2);
+		const double phi = query[0];
+		const double r = query[1];
+		const double leftAngle = this->minCoords[0];
+		const double rightAngle = this->maxCoords[0];
+		const double minR = this->minCoords[1];
+		const double maxR = this->maxCoords[1];
+		/**
+		 * If the query point is not within the quadnode, the distance minimum is on the border.
+		 * Need to check whether extremum is between corners.
+		 */
+		double maxDistance = 0;
+		double minDistance = std::numeric_limits<double>::max();
+
+		if (this->responsible(query)) minDistance = 0;
+
+		auto updateMinMax = [&minDistance, &maxDistance, phi, r](double phi_b, double r_b){
+			double extremalValue = euclidDistancePolar(phi, r, phi_b, r_b);
+			//assert(extremalValue <= r + r_b);
+			maxDistance = std::max(extremalValue, maxDistance);
+			minDistance = std::min(minDistance, extremalValue);
+		};
+
+		/**
+		 * angular boundaries
+		 */
+		//left
+		double extremum = r*cos(leftAngle - phi);
+		if (extremum < maxR && extremum > minR) {
+			updateMinMax(leftAngle, extremum);
+		}
+
+		//right
+		extremum = r*cos(rightAngle - phi);
+		if (extremum < maxR && extremum > minR) {
+			updateMinMax(rightAngle, extremum);
+		}
+
+
+		/**
+		 * radial boundaries.
+		 */
+		if (phi > leftAngle && phi < rightAngle) {
+			updateMinMax(phi, maxR);
+			updateMinMax(phi, minR);
+		}
+		if (phi + M_PI > leftAngle && phi + M_PI < rightAngle) {
+			updateMinMax(phi + M_PI, maxR);
+			updateMinMax(phi + M_PI, minR);
+		}
+		if (phi - M_PI > leftAngle && phi -M_PI < rightAngle) {
+			updateMinMax(phi - M_PI, maxR);
+			updateMinMax(phi - M_PI, minR);
+		}
+
+		/**
+		 * corners
+		 */
+		updateMinMax(leftAngle, maxR);
+		updateMinMax(rightAngle, maxR);
+		updateMinMax(leftAngle, minR);
+		updateMinMax(rightAngle, minR);
+
+		//double shortCutGainMax = maxR + r - maxDistance;
+		//assert(minDistance <= minR + r);
+		//assert(maxDistance <= maxR + r);
+		assert(minDistance < maxDistance);
+		return std::pair<double, double>(minDistance, maxDistance);
+	}
+
+	/**
+	 * @param query Position of the query point
+	 */
+	std::pair<double, double> EuclideanCartesianDistances(Point<double> query) const {
+		/**
+		 * If the query point is not within the quadnode, the distance minimum is on the border.
+		 * Need to check whether extremum is between corners.
+		 */
+		double maxDistance = 0;
+		double minDistance = std::numeric_limits<double>::max();
+		const count dimension = this->minCoords.getDimensions();
+
+		if (this->responsible(query)) minDistance = 0;
+
+		auto updateMinMax = [&minDistance, &maxDistance, query](Point<double> pos){
+			double extremalValue = pos.distance(query);
+			maxDistance = std::max(extremalValue, maxDistance);
+			minDistance = std::min(minDistance, extremalValue);
+		};
+
+		vector<double> closestValues(dimension);
+		vector<double> farthestValues(dimension);
+
+		for (index d = 0; d < dimension; d++) {
+			if (std::abs(query[d] - this->minCoords.at(d)) < std::abs(query[d] - this->maxCoords.at(d))) {
+				closestValues[d] = this->minCoords.at(d);
+				farthestValues[d] = this->maxCoords.at(d);
+			} else {
+				farthestValues[d] = this->minCoords.at(d);
+				closestValues[d] = this->maxCoords.at(d);
+			}
+			if (query[d] >= this->minCoords.at(d) && query[d] <= this->maxCoords.at(d)) {
+				closestValues[d] = query[d];
+			}
+		}
+		updateMinMax(Point<double>(closestValues));
+		updateMinMax(Point<double>(farthestValues));
+
+		assert(minDistance < query.length() + this->maxCoords.length());
+		assert(minDistance < maxDistance);
 		return std::pair<double, double>(minDistance, maxDistance);
 	}
 

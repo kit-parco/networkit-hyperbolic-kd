@@ -10,13 +10,15 @@
 #include <algorithm>
 
 #include "QuadTreeGTest.h"
+#include "../../../auxiliary/Timer.h"
 #include "../../../auxiliary/Random.h"
 #include "../../../auxiliary/Log.h"
 #include "../../../geometric/HyperbolicSpace.h"
 
 #include "../QuadtreeCartesianEuclid.h"
 #include "../QuadtreePolarEuclid.h"
-#include "../KDTree.h"
+#include "../KDTreeHyperbolic.h"
+#include "../KDTreeEuclidean.h"
 
 namespace NetworKit {
 
@@ -396,7 +398,7 @@ TEST_F(QuadTreeGTest, testProbabilisticQueryKD) {
 
 	HyperbolicSpace::fillPoints(angles, radii, R, alpha);
 
-	KDTree<index, true> kd({0,0}, {2*M_PI, r},capacity);
+	KDTreeHyperbolic<index, true> kd({0,0}, {2*M_PI, r},capacity);
 
 	for (index i = 0; i < n; i++) {
 		radii[i] = HyperbolicSpace::hyperbolicRadiusToEuclidean(radii[i]);
@@ -736,12 +738,12 @@ TEST_F(QuadTreeGTest, testQuadNodePolarEuclidDistanceBounds) {
 
 	QuadNodePolarEuclid<index> testNode(lowerLeft, upperRight);
 	ASSERT_TRUE(testNode.responsible(interior));
-	EXPECT_LE(testNode.EuclideanDistances(query).first, testNode.euclidDistancePolar(query[0], query[1], interior[0], interior[1]));
+	EXPECT_LE(testNode.distances(query).first, testNode.euclidDistancePolar(query[0], query[1], interior[0], interior[1]));
 
-	EXPECT_LE(testNode.EuclideanDistances(query).first, testNode.euclidDistancePolar(1.5708, 0, 3.81656, 1.18321));
-	EXPECT_LE(testNode.EuclideanDistances(query).first, testNode.euclidDistancePolar(2.35619, 0.706942, 3.81656, 1.18321));
-	EXPECT_LE(testNode.EuclideanDistances(query).first, testNode.euclidDistancePolar(1.5708, 0.706942, 3.81656, 1.18321));
-	EXPECT_LE(testNode.EuclideanDistances(query).first, testNode.euclidDistancePolar(1.5708, 0.706942, 3.81656, 1.18321));
+	EXPECT_LE(testNode.distances(query).first, testNode.euclidDistancePolar(1.5708, 0, 3.81656, 1.18321));
+	EXPECT_LE(testNode.distances(query).first, testNode.euclidDistancePolar(2.35619, 0.706942, 3.81656, 1.18321));
+	EXPECT_LE(testNode.distances(query).first, testNode.euclidDistancePolar(1.5708, 0.706942, 3.81656, 1.18321));
+	EXPECT_LE(testNode.distances(query).first, testNode.euclidDistancePolar(1.5708, 0.706942, 3.81656, 1.18321));
 }
 
 TEST_F(QuadTreeGTest, testQuadNodeHyperbolicDistances) {
@@ -819,12 +821,92 @@ TEST_F(QuadTreeGTest, testQuadNodeCartesianDistances) {
 	Point<double> p(0.49969783875749996, 0.87199796797360407);
 
 	EXPECT_TRUE(node.responsible(p));
-	double distanceQueryToCell = node.EuclideanDistances(query).first;
+	double distanceQueryToCell = node.distances(query).first;
 	double distanceQueryToPoint = query.distance(p);
 
 	EXPECT_LE(distanceQueryToCell, distanceQueryToPoint);
 	EXPECT_LE(distanceQueryToCell, minDistance);
+}
 
+TEST_F(QuadTreeGTest, benchCartesianQuadProbabilisticQueryUniform) {
+	const index maxDim = 10;
+	const count n = 20000;
+	std::vector<Point<double> > points;
+	auto edgeProb = [n](double distance) -> double {return std::min<double>(1, (1/(distance*n)));};
+	Aux::Timer runtime;
+
+	for (index dim = 1; dim < maxDim; dim++) {
+		std::vector<double> minCoords(dim, 0);
+		std::vector<double> maxCoords(dim, 1);
+
+		std::vector<Point<double> > coordVector;
+		QuadtreeCartesianEuclid<index> quad(minCoords, maxCoords);
+		for (index i = 0; i < n; i++) {
+			vector<double> coords(dim);
+			for (index j = 0; j < dim; j++) {
+				coords[j] = Aux::Random::real(0,1);
+			}
+			quad.addContent(i, coords);
+			coordVector.push_back(coords);
+		}
+
+		count numResults = 0;
+
+		runtime.start();
+		for (index i = 0; i < n; i++) {
+			std::vector<index> result;
+			quad.getElementsProbabilistically(coordVector[i], edgeProb, result);
+			numResults += result.size();
+		}
+		runtime.stop();
+		DEBUG(dim, " dimensions took", runtime.elapsedTag(), " time for ", numResults, " neighbours.");
+	}
+}
+
+TEST_F(QuadTreeGTest, benchCartesianQuadProbabilisticQuerySkewed) {
+	const index maxDim = 10;
+	const count n = 10000;
+
+}
+
+TEST_F(QuadTreeGTest, benchCartesianKDProbabilisticQueryUniform) {
+	const index maxDim = 10;
+	const count n = 20000;
+	std::vector<Point<double> > points;
+	auto edgeProb = [n](double distance) -> double {return std::min<double>(1, (1/(distance*n)));};
+	Aux::Timer runtime;
+
+	for (index dim = 1; dim < maxDim; dim++) {
+		std::vector<double> minCoords(dim, 0);
+		std::vector<double> maxCoords(dim, 1);
+
+		std::vector<Point<double> > coordVector;
+		KDTreeEuclidean<index, true> tree(minCoords, maxCoords);
+		for (index i = 0; i < n; i++) {
+			vector<double> coords(dim);
+			for (index j = 0; j < dim; j++) {
+				coords[j] = Aux::Random::real(0,1);
+			}
+			tree.addContent(i, coords);
+			coordVector.push_back(coords);
+		}
+
+		count numResults = 0;
+
+		runtime.start();
+		for (index i = 0; i < n; i++) {
+			std::vector<index> result;
+			tree.getElementsProbabilistically(coordVector[i], edgeProb, result);
+			numResults += result.size();
+		}
+		runtime.stop();
+		DEBUG(dim, " dimensions took", runtime.elapsedTag(), " time for ", numResults, " neighbours.");
+	}
+}
+
+TEST_F(QuadTreeGTest, benchCartesianKDProbabilisticQuerySkewed) {
+	const index maxDim = 10;
+	const count n = 10000;
 
 }
 

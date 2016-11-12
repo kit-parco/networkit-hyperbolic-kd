@@ -1,45 +1,39 @@
 /*
- * KDNode.h
+ * KDNodeCartesianEuclid.h
  *
- *  Created on: 10.11.2016
+ *  Created on: 12.11.2016
  *      Author: moritzl
- *
- *      for now: hyperbolic geometry
  */
 
-#ifndef KDNODE_H_
-#define KDNODE_H_
+#ifndef KDNODECARTESIANEUCLID_H_
+#define KDNODECARTESIANEUCLID_H_
 
 #include "SpatialCell.h"
-#include "../../geometric/HyperbolicSpace.h"
-
 
 namespace NetworKit {
 
-template <class T, bool poincare = false>
-class KDNode: public NetworKit::SpatialCell<T> {
+template <class T, bool cartesian=true>
+class KDNodeEuclidean: public NetworKit::SpatialCell<T> {
 public:
-	KDNode() = default;
-	virtual ~KDNode() = default;
+	KDNodeEuclidean() = default;
+	virtual ~KDNodeEuclidean() = default;
 
-	KDNode(const Point<double> &minCoords, const Point<double> &maxCoords, count capacity=1000) {
-		this->isLeaf = true;
-		this->subTreeSize = 0;
-		this->minCoords = minCoords;
-		this->maxCoords = maxCoords;
-		this->capacity = capacity;
+	KDNodeEuclidean(const Point<double> &minCoords, const Point<double> &maxCoords, count capacity=1000)
+	: SpatialCell<T>(minCoords, maxCoords, capacity) {
+		if (!cartesian) {
+			if (minCoords.getDimensions() != 2) {
+				throw std::runtime_error("Polar Coordinates only supported for 2 dimensions");
+			}
+			double leftAngle = this->minCoords[0];
+			double minR = this->minCoords[1];
+			double rightAngle = this->maxCoords[0];
+			double maxR = this->maxCoords[1];
 
-		double leftAngle = this->minCoords[0];
-		double minR = this->minCoords[1];
-		double rightAngle = this->maxCoords[0];
-		double maxR = this->maxCoords[1];
+			assert(leftAngle >= 0);
+			assert(rightAngle <= 2*M_PI);
 
-		assert(leftAngle >= 0);
-		assert(rightAngle <= 2*M_PI);
-		assert(leftAngle < rightAngle);
-
-		assert(minR >= 0);
-		assert(maxR > minR);
+			assert(minR >= 0);
+		}
 	}
 
 	void split() override {
@@ -85,28 +79,29 @@ public:
 		newLower[mostSpreadDimension] = middle;
 		newUpper[mostSpreadDimension] = middle;
 
-		std::shared_ptr<KDNode<T, poincare> > firstChild(new KDNode<T, poincare>(this->minCoords, newUpper, this->capacity));
-		std::shared_ptr<KDNode<T, poincare> > secondChild(new KDNode<T, poincare>(newLower, this->maxCoords, this->capacity));
+		std::shared_ptr<KDNodeEuclidean<T, cartesian> > firstChild(new KDNodeEuclidean<T, cartesian>(this->minCoords, newUpper, this->capacity));
+		std::shared_ptr<KDNodeEuclidean<T, cartesian> > secondChild(new KDNodeEuclidean<T, cartesian>(newLower, this->maxCoords, this->capacity));
 
 		this->children = {firstChild, secondChild};
 		this->isLeaf = false;
 	}
 
 	std::pair<double, double> distances(const Point<double> &query) const override {
-		return this->hyperbolicPolarDistances(query, poincare);
+		if (cartesian) {
+			return this->EuclideanCartesianDistances(query);
+		} else {
+			return this->EuclideanPolarDistances(query);
+		}
 	}
 
 	double distance(const Point<double> &query, index k) const override {
-		double result;
-		Point<double> pos = this->positions[k];
-		if (poincare) {
-			result = HyperbolicSpace::poincareMetric(HyperbolicSpace::polarToCartesian(pos[0], pos[1]), HyperbolicSpace::polarToCartesian(query[0], query[1]));
-		} else {
-			result = HyperbolicSpace::nativeDistance(pos[0], pos[1], query[0], query[1]);
+		if (cartesian) {
+			return query.distance(this->positions[k]);
+		}	else {
+			return this->euclidDistancePolar(query[0], query[1], this->positions[k][0], this->positions[k][1]);
 		}
-		return result;
 	}
 };
 
 } /* namespace NetworKit */
-#endif /* KDNODE_H_ */
+#endif /* KDNODECARTESIANEUCLID_H_ */

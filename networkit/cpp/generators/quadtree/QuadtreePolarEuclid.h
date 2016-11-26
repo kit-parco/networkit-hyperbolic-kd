@@ -57,15 +57,6 @@ public:
 	}
 
 	/**
-	 * @param newcomer content to be added at point x
-	 * @param angle angular coordinate of x
-	 * @param R radial coordinate of x
-	 */
-//	void addContent(T newcomer, double angle, double r) {
-//		this->root->addContent(newcomer, {angle, r});
-//	}
-
-	/**
 	 * @param newcomer content to be removed at point x
 	 * @param angle angular coordinate of x
 	 * @param R radial coordinate of x

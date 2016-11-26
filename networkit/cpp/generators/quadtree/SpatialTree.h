@@ -8,7 +8,7 @@
 #ifndef SPATIALTREE_H_
 #define SPATIALTREE_H_
 
-
+#include "SpatialCell.h"
 
 namespace NetworKit {
 
@@ -22,6 +22,10 @@ public:
 
 	void addContent(T content, const Point<double> &coords) {
 		root->addContent(content, coords);
+	}
+
+	bool removeContent(T content, const Point<double> &coords) {
+		return root->removeContent(content, coords);
 	}
 
 	void getElementsInCircle(const Point<double> query, const double radius, vector<T> &circleDenizens) const {
@@ -42,6 +46,25 @@ public:
 
 	void trim() {
 		root->trim();
+	}
+
+	void reindex() {
+		#pragma omp parallel
+		{
+			#pragma omp single nowait
+			{
+				root->reindex(0);
+			}
+		}
+	}
+
+	/**
+	 * Get all elements, regardless of position
+	 *
+	 * @return vector<T> of elements
+	 */
+	vector<T> getElements() const {
+		return root->getElements();
 	}
 
 protected:

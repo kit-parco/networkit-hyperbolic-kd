@@ -13,18 +13,16 @@
 #include <cmath>
 #include <omp.h>
 #include <functional>
+#include "SpatialTree.h"
 #include "QuadNodePolarEuclid.h"
 
 namespace NetworKit {
 
 template <class T>
-class QuadtreePolarEuclid {
-	friend class QuadTreePolarEuclidGTest;
+class QuadtreePolarEuclid : public SpatialTree<T>{
+
 public:
-	QuadtreePolarEuclid() {
-		root = QuadNodePolarEuclid<T>();
-		this->maxRadius = 1;
-	}
+	~QuadtreePolarEuclid() = default;
 
 	/**
 	 * @param maxR Radius of the managed area. Must be smaller than 1.
@@ -33,24 +31,28 @@ public:
 	 * @param capacity How many points can inhabit a leaf cell before it is split up?
 	 *
 	 */
-	QuadtreePolarEuclid(double maxR,bool theoreticalSplit=false, count capacity=1000, double balance = 0.5) {
-		root = QuadNodePolarEuclid<T>({0, 0}, {2*M_PI, maxR}, capacity, theoreticalSplit, balance);
-		this->maxRadius = maxR;
+	QuadtreePolarEuclid(Point<double> minCoords = {0,0}, Point<double> maxCoords = {2*M_PI, 1}, bool theoreticalSplit=false, count capacity=1000, double balance = 0.5)
+	{
+		this->root = std::shared_ptr<QuadNodePolarEuclid<T>>(new QuadNodePolarEuclid<T>(minCoords, maxCoords, capacity, theoreticalSplit, balance));
 	}
 
 	QuadtreePolarEuclid(const vector<double> &angles, const vector<double> &radii, const vector<T> &content, bool theoreticalSplit=false, count capacity=1000, double balance = 0.5) {
 		const count n = angles.size();
 		assert(angles.size() == radii.size());
 		assert(radii.size() == content.size());
-		maxRadius = 0;
-		for (double radius : radii) {
-			if (radius > maxRadius) maxRadius = radius;
-		}
-		maxRadius = std::nextafter(maxRadius, std::numeric_limits<double>::max());
-		root = QuadNodePolarEuclid<T>({0, 0}, {2*M_PI, maxRadius}, capacity, theoreticalSplit,balance);
+		double minRadius, maxRadius, minAngle, maxAngle;
+
+		auto angleMinMax = std::minmax_element(angles.begin(), angles.end());
+		auto radiiMinMax = std::minmax_element(radii.begin(), radii.end());
+		minAngle = *angleMinMax.first;
+		minRadius = *radiiMinMax.first;
+		maxAngle = std::nextafter(*angleMinMax.second, std::numeric_limits<double>::max());
+		maxRadius = std::nextafter(*radiiMinMax.second, std::numeric_limits<double>::max());
+		this->root = std::shared_ptr<QuadNodePolarEuclid<T>>(new QuadNodePolarEuclid<T>({minAngle, minRadius}, {maxAngle, maxRadius}, capacity, theoreticalSplit, balance));
+
 		for (index i = 0; i < n; i++) {
 			assert(content[i] < n);
-			root.addContent(content[i], {angles[i], radii[i]});
+			this->root->addContent(content[i], {angles[i], radii[i]});
 		}
 	}
 
@@ -59,9 +61,9 @@ public:
 	 * @param angle angular coordinate of x
 	 * @param R radial coordinate of x
 	 */
-	void addContent(T newcomer, double angle, double r) {
-		root.addContent(newcomer, {angle, r});
-	}
+//	void addContent(T newcomer, double angle, double r) {
+//		this->root->addContent(newcomer, {angle, r});
+//	}
 
 	/**
 	 * @param newcomer content to be removed at point x
@@ -69,78 +71,33 @@ public:
 	 * @param R radial coordinate of x
 	 */
 	bool removeContent(T toRemove, double angle, double r) {
-		return root.removeContent(toRemove, {angle, r});
-	}
-
-	/**
-	 * Get all elements, regardless of position
-	 *
-	 * @return vector<T> of elements
-	 */
-	vector<T> getElements() const {
-		return root.getElements();
+		return this->root->removeContent(toRemove, {angle, r});
 	}
 
 	void extractCoordinates(vector<double> &anglesContainer, vector<double> &radiiContainer) const {
-		root.getCoordinates(anglesContainer, radiiContainer);
+		this->root->getCoordinates(anglesContainer, radiiContainer);
 	}
 
 	void getElementsInEuclideanCircle(const Point<double> circleCenter, const double radius, vector<T> &circleDenizens) const {
-		root.getElementsInCircle(circleCenter, radius, circleDenizens);
-	}
-
-	count getElementsProbabilistically(Point<double> query, std::function<double(double)> prob, vector<T> &circleDenizens) {
-		return root.getElementsProbabilistically(query, prob, circleDenizens);
+		this->root->getElementsInCircle(circleCenter, radius, circleDenizens);
 	}
 
 	void recount() {
-		root.recount();
-	}
-
-	count size() const {
-		return root.size();
-	}
-
-	count height() const {
-		return root.height();
+		this->root->recount();
 	}
 
 	count countLeaves() const {
-		return root.countLeaves();
-	}
-
-	index indexSubtree(index nextID) {
-		return root.indexSubtree(nextID);
+		return this->root->countLeaves();
 	}
 
 	index getCellID(double phi, double r) const {
-		return root.getCellID(phi, r);
+		return this->root->getCellID({phi, r});
 	}
 
 	double getMaxRadius() const {
-		return maxRadius;
+		return this->maxCoords[1];
 	}
 
-	void reindex() {
-		#pragma omp parallel
-		{
-			#pragma omp single nowait
-			{
-				root.reindex(0);
-			}
-		}
-	}
-
-	/**
-	 * trims the vectors used to hold the content in the leaf cells. Reduces memory usage, makes changes slower
-	 */
-	void trim() {
-		root.trim();
-	}
-
-private:
-	QuadNodePolarEuclid<T> root;
-	double maxRadius;
 };
 }
 

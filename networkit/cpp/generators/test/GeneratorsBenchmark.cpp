@@ -201,81 +201,89 @@ TEST_F(GeneratorsBenchmark, benchmarkDynamicHyperbolicGeneratorOnNodeMovement) {
 }
 
 TEST_F(GeneratorsBenchmark, benchmarkSingleNodeMovements) {
-	const count iterations = 100;
-	const count n = 10000;
+	const count iterations = 1000;
+	const count minN = 1 << 13;
+	const count maxN = 1 << 23;
 
 	const double alpha = 0.75;
 	const double T = 0.1;
 	const double C = -1;
-	const double R = 2*log(n)+C;
-	INFO("Started Test Case");
 
-	//setup coordinates and quadtree
-	vector<double> angles(n);
-	vector<double> radii(n);
-	HyperbolicSpace::fillPoints(angles, radii, R, alpha);
-	INFO("Sampled point positions");
-	Quadtree<index, false> quad(R, false, alpha);
-	for (index i = 0; i < n; i++) {
-		quad.addContent(i, angles[i], radii[i]);
-	}
-	INFO("Filled Quadtree.");
+	for (count n = minN; n <= maxN; n *= 2) {
+		const double R = 2*log(n)+C;
+		INFO("Started Test Case with ", n, " nodes.");
 
-	quad.trim();
-	//now define lambda
-	double beta = 1/T;
-	assert(beta == beta);
-	auto edgeProb = [beta, R](double distance) -> double {return 1 / (exp(beta*(distance-R)/2)+1);};
+		//setup coordinates and quadtree
+		Aux::Timer graphTimer;
+		graphTimer.start();
+		vector<double> angles(n);
+		vector<double> radii(n);
+		HyperbolicSpace::fillPoints(angles, radii, R, alpha);
+		INFO("Sampled point positions");
+		Quadtree<index, false> quad(R, false, alpha);
+		for (index i = 0; i < n; i++) {
+			quad.addContent(i, angles[i], radii[i]);
+		}
+		INFO("Filled Quadtree.");
 
-	//get Graph
-	GraphBuilder result(n, false, false);//no direct swap with probabilistic graphs
-	count totalCandidates = 0;
-	#pragma omp parallel for
-	for (index i = 0; i < n; i++) {
-		vector<index> near;
-		totalCandidates += quad.getElementsProbabilistically({angles[i], radii[i]}, edgeProb, near);
-		for (index j : near) {
-			if (j >= n) ERROR("Node ", j, " prospective neighbour of ", i, " does not actually exist. Oops.");
-			if (j > i) {
-				result.addHalfEdge(i, j);
+		quad.trim();
+		//now define lambda
+		double beta = 1/T;
+		assert(beta == beta);
+		auto edgeProb = [beta, R](double distance) -> double {return 1 / (exp(beta*(distance-R)/2)+1);};
+
+		//get Graph
+		GraphBuilder result(n, false, false);//no direct swap with probabilistic graphs
+		count totalCandidates = 0;
+		#pragma omp parallel for
+		for (index i = 0; i < n; i++) {
+			vector<index> near;
+			totalCandidates += quad.getElementsProbabilistically({angles[i], radii[i]}, edgeProb, near);
+			for (index j : near) {
+				if (j >= n) ERROR("Node ", j, " prospective neighbour of ", i, " does not actually exist. Oops.");
+				if (j > i) {
+					result.addHalfEdge(i, j);
+				}
 			}
 		}
-	}
-	INFO("Candidates tested: ", totalCandidates);
-	Graph G = result.toGraph(true, true);
 
-	double maxcdf = cosh(alpha*R);
-	std::uniform_real_distribution<double> phidist{0, 2*M_PI};
-	std::uniform_real_distribution<double> rdist{1, maxcdf};
+		Graph G = result.toGraph(true, true);
+		graphTimer.stop();
+		INFO("Generated Graph in ", graphTimer.elapsedMilliseconds(), " milliseconds.");
 
-	//now measure the dynamic part
-	Aux::Timer timer;
-	timer.start();
+		double maxcdf = cosh(alpha*R);
+		std::uniform_real_distribution<double> phidist{0, 2*M_PI};
+		std::uniform_real_distribution<double> rdist{1, maxcdf};
 
-	for (index i = 0; i < iterations; i++) {
-		index toMove = Aux::Random::integer(n);
+		//now measure the dynamic part
+		Aux::Timer timer;
+		timer.start();
 
-		//remove old position and nodes
-		quad.removeContent(toMove, angles[toMove], radii[toMove]);
-		for (index neighbor : G.neighbors(toMove)) {
-			G.removeEdge(toMove, neighbor);
+		for (index i = 0; i < iterations; i++) {
+			index toMove = Aux::Random::integer(n);
+
+			//remove old position and nodes
+			quad.removeContent(toMove, angles[toMove], radii[toMove]);
+			for (index neighbor : G.neighbors(toMove)) {
+				G.removeEdge(toMove, neighbor);
+			}
+
+			//get new position
+			angles[toMove] = phidist(Aux::Random::getURNG());
+			double random = rdist(Aux::Random::getURNG());
+			radii[toMove] = (acosh(random)/alpha);
+			if (radii[toMove] == R) radii[toMove] = std::nextafter(radii[toMove], 0);
+
+			//get new edges
+			vector<index> newNeighbors;
+			quad.getElementsProbabilistically({angles[toMove], radii[toMove]}, edgeProb, newNeighbors);
+			for (index u : newNeighbors) {
+				G.addEdge(u, toMove);
+			}
 		}
-
-		//get new position
-		angles[toMove] = phidist(Aux::Random::getURNG());
-		double random = rdist(Aux::Random::getURNG());
-		radii[toMove] = (acosh(random)/alpha);
-		if (radii[toMove] == R) radii[toMove] = std::nextafter(radii[toMove], 0);
-
-		//get new edges
-		vector<index> newNeighbors;
-		quad.getElementsProbabilistically({angles[toMove], radii[toMove]}, edgeProb, newNeighbors);
-		for (index u : newNeighbors) {
-			G.addEdge(u, toMove);
-		}
+		timer.stop();
+		INFO(iterations, " iterations took ", timer.elapsedMilliseconds(), " milliseconds.");
 	}
-	timer.stop();
-	INFO(iterations, " iterations took ", timer.elapsedMilliseconds(), " milliseconds.");
 
 }
 

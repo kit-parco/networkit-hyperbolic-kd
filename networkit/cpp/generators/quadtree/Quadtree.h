@@ -102,7 +102,7 @@ public:
 	}
 
 	void getElementsInHyperbolicCircle(const Point<double> circleCenter, const double hyperbolicRadius, vector<T> &circleDenizens) const {
-		getElementsInHyperbolicCircle(circleCenter, hyperbolicRadius, circleDenizens);
+		root.getElementsInCircle(circleCenter, hyperbolicRadius, circleDenizens);
 	}
 
 	count getElementsProbabilistically(Point<double> query, std::function<double(double)> prob, vector<T> &circleDenizens) {

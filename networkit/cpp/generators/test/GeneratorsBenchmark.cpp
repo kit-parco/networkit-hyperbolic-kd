@@ -249,7 +249,7 @@ TEST_F(GeneratorsBenchmark, benchmarkSingleNodeMovements) {
 
 		Graph G = result.toGraph(true, true);
 		graphTimer.stop();
-		INFO("Generated Graph in ", graphTimer.elapsedMilliseconds(), " milliseconds.");
+		INFO("Generated ", G.numberOfEdges(), " edges in ", graphTimer.elapsedMilliseconds(), " milliseconds, k:", 2*G.numberOfEdges() / (double)n);
 
 		double maxcdf = cosh(alpha*R);
 		std::uniform_real_distribution<double> phidist{0, 2*M_PI};
@@ -277,6 +277,89 @@ TEST_F(GeneratorsBenchmark, benchmarkSingleNodeMovements) {
 			//get new edges
 			vector<index> newNeighbors;
 			quad.getElementsProbabilistically({angles[toMove], radii[toMove]}, edgeProb, newNeighbors);
+			for (index u : newNeighbors) {
+				G.addEdge(u, toMove);
+			}
+		}
+		timer.stop();
+		INFO(iterations, " iterations took ", timer.elapsedMilliseconds(), " milliseconds.");
+	}
+
+}
+
+TEST_F(GeneratorsBenchmark, benchmarkSingleNodeMovementsCold) {
+	const count iterations = 1000;
+	const count minN = 1 << 13;
+	const count maxN = 1 << 23;
+
+	const double alpha = 0.75;
+	const double T = 0;
+	const double C = -1;
+
+	for (count n = minN; n <= maxN; n *= 2) {
+		const double R = 2*log(n)+C;
+		INFO("Started Test Case with ", n, " nodes.");
+
+		//setup coordinates and quadtree
+		Aux::Timer graphTimer;
+		graphTimer.start();
+		vector<double> angles(n);
+		vector<double> radii(n);
+		HyperbolicSpace::fillPoints(angles, radii, R, alpha);
+		INFO("Sampled point positions");
+		Quadtree<index, false> quad(R, false, alpha);
+		for (index i = 0; i < n; i++) {
+			quad.addContent(i, angles[i], radii[i]);
+		}
+		INFO("Filled Quadtree.");
+
+		quad.trim();
+
+		//get Graph
+		GraphBuilder result(n, false, false);
+		#pragma omp parallel for
+		for (index i = 0; i < n; i++) {
+			vector<index> near;
+
+			quad.getElementsInHyperbolicCircle({angles[i], radii[i]}, R, near);
+			for (index j : near) {
+				if (j >= n) ERROR("Node ", j, " prospective neighbour of ", i, " does not actually exist. Oops.");
+				if (j > i) {
+					result.addHalfEdge(i, j);
+				}
+			}
+		}
+
+		Graph G = result.toGraph(true, true);
+		graphTimer.stop();
+		INFO("Generated ", G.numberOfEdges(), " edges in ", graphTimer.elapsedMilliseconds(), " milliseconds, k:", 2*G.numberOfEdges() / (double)n);
+
+		double maxcdf = cosh(alpha*R);
+		std::uniform_real_distribution<double> phidist{0, 2*M_PI};
+		std::uniform_real_distribution<double> rdist{1, maxcdf};
+
+		//now measure the dynamic part
+		Aux::Timer timer;
+		timer.start();
+
+		for (index i = 0; i < iterations; i++) {
+			index toMove = Aux::Random::integer(n);
+
+			//remove old position and nodes
+			quad.removeContent(toMove, angles[toMove], radii[toMove]);
+			for (index neighbor : G.neighbors(toMove)) {
+				G.removeEdge(toMove, neighbor);
+			}
+
+			//get new position
+			angles[toMove] = phidist(Aux::Random::getURNG());
+			double random = rdist(Aux::Random::getURNG());
+			radii[toMove] = (acosh(random)/alpha);
+			if (radii[toMove] == R) radii[toMove] = std::nextafter(radii[toMove], 0);
+
+			//get new edges
+			vector<index> newNeighbors;
+			quad.getElementsInHyperbolicCircle({angles[i], radii[i]}, R, newNeighbors);
 			for (index u : newNeighbors) {
 				G.addEdge(u, toMove);
 			}

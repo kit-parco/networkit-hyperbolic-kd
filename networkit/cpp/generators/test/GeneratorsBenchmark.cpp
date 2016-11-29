@@ -10,6 +10,8 @@
 #include <omp.h>
 #include <random>
 #include <functional>
+#include <cstdlib>
+#include <string>
 
 #include "GeneratorsBenchmark.h"
 #include "../../auxiliary/Log.h"
@@ -21,6 +23,8 @@
 #include "../BarabasiAlbertGenerator.h"
 #include "../ChungLuGenerator.h"
 #include "../../graph/GraphBuilder.h"
+#include "../../io/HyperbolicGraphReader.h"
+
 
 namespace NetworKit {
 
@@ -200,6 +204,85 @@ TEST_F(GeneratorsBenchmark, benchmarkDynamicHyperbolicGeneratorOnNodeMovement) {
 	}
 }
 
+TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
+	const count iterations = 1000;
+	const count minN = 1 << 13;
+	const count maxN = 1 << 23;
+
+	const double alpha = 0.75;
+	const double T = 0.1;
+	const double C = -1;
+
+	for (count n = minN; n <= maxN; n *= 2) {
+		INFO("Started Test Case with ", n, " nodes.");
+		std::string commandstring = std::string("/home/moritzl/Gadgets/hyperbolic-embedder/embedder") + std::string(" --generate test-") + std::to_string(n)
+				+ std::string(" --n ") + std::to_string(n) + std::string(" --C ") + std::to_string(C) + std::string(" --T ") + std::to_string(T) + std::string(" --alpha ") + std::to_string(alpha);
+
+		if (std::system(NULL)) {
+			int returnValue = system(commandstring.c_str());
+			if (returnValue != 0) {
+				DEBUG("Return value was ", returnValue);
+			}
+		} else {
+			throw std::runtime_error("No system access!");
+		}
+
+		std::string filenamePrefix = "test-"+std::to_string(n);
+		Graph G;
+		vector<double> angles;
+		vector<double> radii;
+		HyperbolicGraphReader::readGraph(filenamePrefix, G, angles, radii);
+		EXPECT_EQ(n, angles.size());
+		EXPECT_EQ(n, radii.size());
+		EXPECT_EQ(n, G.numberOfNodes());
+
+		const double R = 2*log(n)+C;
+		Quadtree<index, false> quad(R, true, alpha, 20, 0.5);
+		for (index i = 0; i < n; i++) {
+			quad.addContent(i, angles[i], radii[i]);
+		}
+
+		quad.trim();
+
+		double beta = 1/T;
+		assert(beta == beta);
+		auto edgeProb = [beta, R](double distance) -> double {return 1 / (exp(beta*(distance-R)/2)+1);};
+
+		double maxcdf = cosh(alpha*R);
+		std::uniform_real_distribution<double> phidist{0, 2*M_PI};
+		std::uniform_real_distribution<double> rdist{1, maxcdf};
+
+		//now measure the dynamic part
+		Aux::Timer timer;
+		timer.start();
+
+		for (index i = 0; i < iterations; i++) {
+			index toMove = Aux::Random::integer(n);
+
+			//remove old position and nodes
+			quad.removeContent(toMove, angles[toMove], radii[toMove]);
+			for (index neighbor : G.neighbors(toMove)) {
+				G.removeEdge(toMove, neighbor);
+			}
+
+			//get new position
+			angles[toMove] = phidist(Aux::Random::getURNG());
+			double random = rdist(Aux::Random::getURNG());
+			radii[toMove] = (acosh(random)/alpha);
+			if (radii[toMove] == R) radii[toMove] = std::nextafter(radii[toMove], 0);
+
+			//get new edges
+			vector<index> newNeighbors;
+			quad.getElementsProbabilistically({angles[toMove], radii[toMove]}, edgeProb, newNeighbors);
+			for (index u : newNeighbors) {
+				G.addEdge(u, toMove);
+			}
+		}
+		timer.stop();
+		INFO(iterations, " iterations took ", timer.elapsedMilliseconds(), " milliseconds.");
+	}
+}
+
 TEST_F(GeneratorsBenchmark, benchmarkSingleNodeMovements) {
 	const count iterations = 1000;
 	const count minN = 1 << 13;
@@ -220,11 +303,10 @@ TEST_F(GeneratorsBenchmark, benchmarkSingleNodeMovements) {
 		vector<double> radii(n);
 		HyperbolicSpace::fillPoints(angles, radii, R, alpha);
 		INFO("Sampled point positions");
-		Quadtree<index, false> quad(R, false, alpha);
+		Quadtree<index, false> quad(R, true, alpha, 20, 0.1);
 		for (index i = 0; i < n; i++) {
 			quad.addContent(i, angles[i], radii[i]);
 		}
-		INFO("Filled Quadtree.");
 
 		quad.trim();
 		//now define lambda
@@ -284,7 +366,6 @@ TEST_F(GeneratorsBenchmark, benchmarkSingleNodeMovements) {
 		timer.stop();
 		INFO(iterations, " iterations took ", timer.elapsedMilliseconds(), " milliseconds.");
 	}
-
 }
 
 TEST_F(GeneratorsBenchmark, benchmarkSingleNodeMovementsCold) {

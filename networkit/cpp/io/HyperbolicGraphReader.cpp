@@ -12,15 +12,26 @@
 namespace NetworKit {
 	void HyperbolicGraphReader::readGraph(std::string filenamePrefix, Graph &G, std::vector<double> &angleOutput, std::vector<double> &radiiOutput) {
 
-		EdgeListReader reader('\t', 0);
-		G = reader.read(filenamePrefix+"-links.txt");
-		const count n = G.numberOfNodes();
-
+		/**
+		 * read coordinates and parameters
+		 */
 		std::vector<std::string> coordinates =  LineFileReader::read(filenamePrefix+"-coordinates.txt");
 
 		while (std::string("").compare(coordinates[coordinates.size() -1]) == 0) {
 			coordinates.pop_back();
 		}
+
+		//get parameters
+
+		std::stringstream stream(coordinates[1]);
+		std::string item;
+		const char delim = '\t';
+
+		std::getline(stream, item, delim);
+		const count n = std::stoul(item);
+
+		std::getline(stream, item, delim);
+		const double R = std::stod(item);
 
 		if (coordinates.size() != n+2) {
 			std::string lastElement = coordinates[coordinates.size() -1];
@@ -29,8 +40,6 @@ namespace NetworKit {
 
 		for (index i = 2; i < coordinates.size(); i++) {
 			std::stringstream ss(coordinates[i]);
-			std::string item;
-			char delim = '\t';
 
 			std::getline(ss, item, delim);
 			index node = std::stoul(item);
@@ -40,6 +49,9 @@ namespace NetworKit {
 
 			std::getline(ss, item, delim);
 			double radius = std::stod(item);
+			if (radius < 0 || radius > R) {
+				throw std::runtime_error("Read radius " + std::to_string(radius) + ". (R is " + std::to_string(R) + ")");
+			}
 			radiiOutput.push_back(radius);
 
 			std::getline(ss, item, delim);
@@ -49,5 +61,20 @@ namespace NetworKit {
 			}
 			angleOutput.push_back(angle);
 		}
+
+		/**
+		 * read links
+		 */
+
+		EdgeListReader reader('\t', 0);
+		G = reader.read(filenamePrefix+"-links.txt");
+		if (G.numberOfNodes() > n) {
+			throw std::runtime_error("Graph has " + std::to_string(G.numberOfNodes()) + " nodes, but only " + std::to_string(n) + " coordinates were given.");
+		}
+		while (G.numberOfNodes() < n) {
+			INFO("Adding nodes for additional coordinates.");
+			G.addNode();
+		}
+
 	}
 } /* namespace NetworKit */

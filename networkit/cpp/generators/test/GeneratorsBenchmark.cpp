@@ -214,7 +214,7 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 	const double C = -1;
 
 	for (count n = minN; n <= maxN; n *= 2) {
-		INFO("Started Test Case with ", n, " nodes.");
+		std::cout << "Started Test Case with " << n << " nodes." << std::endl;
 		std::string commandstring = std::string("/home/moritzl/Gadgets/hyperbolic-embedder/embedder") + std::string(" --generate test-") + std::to_string(n)
 				+ std::string(" --n ") + std::to_string(n) + std::string(" --C ") + std::to_string(C) + std::string(" --T ") + std::to_string(T) + std::string(" --alpha ") + std::to_string(alpha);
 
@@ -279,7 +279,7 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 			}
 		}
 		timer.stop();
-		INFO(iterations, " iterations took ", timer.elapsedMilliseconds(), " milliseconds.");
+		std::cout << iterations << " iterations took " << timer.elapsedMilliseconds() << " milliseconds." << std::endl;
 	}
 }
 

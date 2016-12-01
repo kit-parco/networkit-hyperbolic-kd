@@ -237,7 +237,7 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 		EXPECT_EQ(n, G.numberOfNodes());
 
 		const double R = 2*log(n)+C;
-		Quadtree<index, false> quad(R, true, alpha, 20, 0.5);
+		Quadtree<index, false> quad(R, true, alpha, 20, 0.95);
 		for (index i = 0; i < n; i++) {
 			quad.addContent(i, angles[i], radii[i]);
 		}
@@ -374,7 +374,6 @@ TEST_F(GeneratorsBenchmark, benchmarkSingleNodeMovementsCold) {
 	const count maxN = 1 << 23;
 
 	const double alpha = 0.75;
-	const double T = 0;
 	const double C = -1;
 
 	for (count n = minN; n <= maxN; n *= 2) {

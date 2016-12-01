@@ -24,15 +24,11 @@ public:
 			if (minCoords.getDimensions() != 2) {
 				throw std::runtime_error("Polar Coordinates only supported for 2 dimensions");
 			}
-			double leftAngle = this->minCoords[0];
-			double minR = this->minCoords[1];
-			double rightAngle = this->maxCoords[0];
-			double maxR = this->maxCoords[1];
 
-			assert(leftAngle >= 0);
-			assert(rightAngle <= 2*M_PI);
+			assert(this->minCoords[0] >= 0);
+			assert(this->maxCoords[0] <= 2*M_PI);
 
-			assert(minR >= 0);
+			assert(this->minCoords[1] >= 0);
 		}
 	}
 

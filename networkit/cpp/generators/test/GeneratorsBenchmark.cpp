@@ -237,7 +237,7 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 		EXPECT_EQ(n, G.numberOfNodes());
 
 		const double R = 2*log(n)+C;
-		Quadtree<index, false> quad(R, true, alpha, 20, 0.95);
+		Quadtree<index, false> quad(R, true, alpha, 20, 0.999);
 		for (index i = 0; i < n; i++) {
 			quad.addContent(i, angles[i], radii[i]);
 		}
@@ -251,6 +251,10 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 		double maxcdf = cosh(alpha*R);
 		std::uniform_real_distribution<double> phidist{0, 2*M_PI};
 		std::uniform_real_distribution<double> rdist{1, maxcdf};
+
+		int seed = std::time(NULL);
+		Aux::Random::setSeed(seed, false);
+		std::cout << "Used seed " << seed << " for dynamic benchmarks." << std::endl;
 
 		//now measure the dynamic part
 		Aux::Timer timer;

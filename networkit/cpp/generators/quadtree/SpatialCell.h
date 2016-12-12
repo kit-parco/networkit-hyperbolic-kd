@@ -163,7 +163,7 @@ public:
 		}
 	}
 
-	virtual void addContent(T input, Point<double> coords) {
+	virtual void addContent(T input, const Point<double> &coords) {
 		assert(content.size() == positions.size());
 		assert(this->responsible(coords));
 		if (isLeaf) {

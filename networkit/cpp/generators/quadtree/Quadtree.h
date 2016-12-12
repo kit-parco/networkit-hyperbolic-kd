@@ -67,12 +67,30 @@ public:
 	}
 
 	/**
+	 * @param newcomer content to be added at point x
+	 * @param angle angular coordinate of x
+	 * @param R radial coordinate of x
+	 */
+	void addContent(T newcomer, const Point<double> &coords) {
+		root.addContent(newcomer, coords);
+	}
+
+	/**
 	 * @param toRemove content to be removed at point x
 	 * @param angle angular coordinate of x
 	 * @param R radial coordinate of x
 	 */
 	bool removeContent(T toRemove, double angle, double r) {
 		return root.removeContent(toRemove, {angle, r});
+	}
+
+	/**
+	 * @param toRemove content to be removed at point x
+	 * @param angle angular coordinate of x
+	 * @param R radial coordinate of x
+	 */
+	bool removeContent(T toRemove, const Point<double> &coords) {
+		return root.removeContent(toRemove, coords);
 	}
 
 	/**

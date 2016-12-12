@@ -25,6 +25,8 @@
 #include "../../graph/GraphBuilder.h"
 #include "../../io/HyperbolicGraphReader.h"
 
+#include "../quadtree/KDTreeHyperbolic.h"
+
 
 namespace NetworKit {
 
@@ -239,7 +241,7 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 		const double R = 2*log(n)+C;
 		Quadtree<index, false> quad(R, true, alpha, 20, 0.999);
 		for (index i = 0; i < n; i++) {
-			quad.addContent(i, angles[i], radii[i]);
+			quad.addContent(i, {angles[i], radii[i]});
 		}
 
 		quad.trim();
@@ -264,7 +266,7 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 			index toMove = Aux::Random::integer(n);
 
 			//remove old position and nodes
-			quad.removeContent(toMove, angles[toMove], radii[toMove]);
+			quad.removeContent(toMove, {angles[toMove], radii[toMove]});
 			for (index neighbor : G.neighbors(toMove)) {
 				G.removeEdge(toMove, neighbor);
 			}
@@ -274,6 +276,10 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 			double random = rdist(Aux::Random::getURNG());
 			radii[toMove] = (acosh(random)/alpha);
 			if (radii[toMove] == R) radii[toMove] = std::nextafter(radii[toMove], 0);
+
+			quad.addContent(toMove, {angles[toMove], radii[toMove]});
+
+			assert(quad.size() == n);
 
 			//get new edges
 			vector<index> newNeighbors;

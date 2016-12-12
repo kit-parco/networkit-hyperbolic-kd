@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <functional>
 #include <assert.h>
+
 #include "SpatialCell.h"
 #include "../../auxiliary/Log.h"
 #include "../../geometric/HyperbolicSpace.h"
@@ -46,6 +47,8 @@ public:
 		this->balance = balance;
 		this->splitTheoretical = splitTheoretical;
 	}
+
+	virtual ~QuadNodePolarEuclid() = default;
 
 	void split() {
 		assert(this->isLeaf);

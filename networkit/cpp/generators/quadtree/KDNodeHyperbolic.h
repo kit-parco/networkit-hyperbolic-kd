@@ -24,17 +24,9 @@ public:
 
 	KDNodeHyperbolic(const Point<double> &minCoords, const Point<double> &maxCoords, count capacity=1000)
 	: SpatialCell<T>(minCoords, maxCoords, capacity) {
-		double leftAngle = this->minCoords[0];
-		double minR = this->minCoords[1];
-		double rightAngle = this->maxCoords[0];
-		double maxR = this->maxCoords[1];
-
-		assert(leftAngle >= 0);
-		assert(rightAngle <= 2*M_PI);
-		assert(leftAngle < rightAngle);
-
-		assert(minR >= 0);
-		assert(maxR > minR);
+		assert(this->minCoords[0] >= 0);//left angle
+		assert(this->minCoords[1] >= 0);//minimum radius
+		assert(this->maxCoords[0] <= 2*M_PI); //right angle
 	}
 
 	void split() override {

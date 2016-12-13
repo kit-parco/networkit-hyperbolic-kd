@@ -16,6 +16,9 @@ namespace NetworKit {
 		 * read coordinates and parameters
 		 */
 		std::vector<std::string> coordinates =  LineFileReader::read(filenamePrefix+"-coordinates.txt");
+		if (coordinates.size() == 0) {
+			throw std::runtime_error("File "+filenamePrefix+"-coordinates.txt"+" not found or empty.");
+		}
 
 		while (std::string("").compare(coordinates[coordinates.size() -1]) == 0) {
 			coordinates.pop_back();

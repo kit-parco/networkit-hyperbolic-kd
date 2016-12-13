@@ -83,6 +83,7 @@ public:
 		this->content.swap(allContent);
 		this->positions.swap(allPositions);
 		this->isLeaf = true;
+		this->subTreeSize = 0;
 	}
 
 	/**
@@ -167,20 +168,20 @@ public:
 		assert(content.size() == positions.size());
 		assert(this->responsible(coords));
 		if (isLeaf) {
-			if (content.size() + 1 < capacity) {
-				content.push_back(input);
-				positions.push_back(coords);
-			} else {
+			content.push_back(input);
+			positions.push_back(coords);
+
+			//if now overfull, split up
+			if (content.size() > capacity) {
 				split();
 
 				for (index i = 0; i < content.size(); i++) {
 					this->addContent(content[i], positions[i]);
 				}
 				assert(subTreeSize == content.size());//we have added everything twice
-				subTreeSize = content.size();
+
 				content.clear();
 				positions.clear();
-				this->addContent(input, coords);
 			}
 		}
 		else {

@@ -206,6 +206,104 @@ TEST_F(GeneratorsBenchmark, benchmarkDynamicHyperbolicGeneratorOnNodeMovement) {
 	}
 }
 
+TEST_F(GeneratorsBenchmark, benchmarkQuadTreeBalance) {
+	const count iterations = 10000;
+
+	const count n = 1 << 23;
+
+	const double alpha = 0.75;
+	const double T = 0.1;
+	const double C = -1;
+
+	const count capacity = 20;
+
+	const vector<double> balanceList = {0.9, 0.99, 0.999, 0.9999};
+
+	std::string filenamePrefix = "test-"+std::to_string(n);
+	Graph G;
+	vector<double> angles;
+	vector<double> radii;
+	HyperbolicGraphReader::readGraph(filenamePrefix, G, angles, radii);
+	EXPECT_EQ(n, angles.size());
+	EXPECT_EQ(n, radii.size());
+	EXPECT_EQ(n, G.numberOfNodes());
+	std::cout << "Read file.";
+
+	for (index b = 0; b < balanceList.size(); b++) {
+		double balance = balanceList[b];
+		std::cout << "Started Test Case with " << n << " nodes and balance " << balance << "."<< std::endl;
+
+		const double R = 2*log(n)+C;
+		Quadtree<index, false> quad(R, true, alpha, capacity, balance);
+		for (index i = 0; i < n; i++) {
+			quad.addContent(i, {angles[i], radii[i]});
+		}
+
+		quad.trim();
+
+		std::cout << "Filled quadtree." << std::endl;
+
+		double beta = 1/T;
+		assert(beta == beta);
+		auto edgeProb = [beta, R](double distance) -> double {return 1 / (exp(beta*(distance-R)/2)+1);};
+
+		double maxcdf = cosh(alpha*R);
+		std::uniform_real_distribution<double> phidist{0, 2*M_PI};
+		std::uniform_real_distribution<double> rdist{1, maxcdf};
+
+		int seed = std::time(NULL);
+		Aux::Random::setSeed(seed, false);
+		std::cout << "Used seed " << seed << " for dynamic benchmarks." << std::endl;
+
+		count totalNeighbours = 0;
+
+		//now measure the dynamic part
+		Aux::Timer timer;
+		timer.start();
+
+		for (index i = 0; i < iterations; i++) {
+			index toMove = Aux::Random::index(n);
+			//if (i == 0) {
+			//	std::cout << "First moved node: " << toMove << " at (" << angles[toMove] << ", " << radii[toMove] << ")." << std::endl;
+			//}
+
+			//remove old position and nodes
+			bool removed = quad.removeContent(toMove, {angles[toMove], radii[toMove]});
+			if (!removed) {
+				throw std::runtime_error("Node " + std::to_string(toMove) + " at (" + std::to_string(angles[toMove]) + ", " + std::to_string(radii[toMove]) + ") could not be moved.");
+			}
+			assert(removed);
+			assert(quad.size() == n-1);
+			for (index neighbor : G.neighbors(toMove)) {
+				G.removeEdge(toMove, neighbor);
+			}
+
+			//get new position
+			angles[toMove] = phidist(Aux::Random::getURNG());
+			double random = rdist(Aux::Random::getURNG());
+			radii[toMove] = (acosh(random)/alpha);
+			if (radii[toMove] == R) radii[toMove] = std::nextafter(radii[toMove], 0);
+
+			quad.addContent(toMove, {angles[toMove], radii[toMove]});
+			//if (i == 0) {
+			//	std::cout << "Moved to: (" << angles[toMove] << ", " << radii[toMove] << ")." << std::endl;
+			//}
+
+			assert(quad.size() == n);
+
+			//get new edges
+			vector<index> newNeighbors;
+			quad.getElementsProbabilistically({angles[toMove], radii[toMove]}, edgeProb, newNeighbors);
+			for (index u : newNeighbors) {
+				G.addEdge(u, toMove);
+			}
+			totalNeighbours += newNeighbors.size();
+		}
+		timer.stop();
+		std::cout << iterations << " iterations took " << timer.elapsedMilliseconds() << " milliseconds, sampling " << totalNeighbours << " edges."<< std::endl;
+	}
+}
+
 TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 	const count iterations = 1000;
 	const count minN = 1 << 13;
@@ -214,6 +312,9 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 	const double alpha = 0.75;
 	const double T = 0.1;
 	const double C = -1;
+
+	const double balance = 0.999;
+	const count capacity = 20;
 
 	for (count n = minN; n <= maxN; n *= 2) {
 		std::cout << "Started Test Case with " << n << " nodes." << std::endl;
@@ -239,7 +340,8 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 		EXPECT_EQ(n, G.numberOfNodes());
 
 		const double R = 2*log(n)+C;
-		Quadtree<index, false> quad(R, true, alpha, 20, 0.999);
+		//KDTreeHyperbolic<index, false> quad({0,0},{2*M_PI,R}, 10);
+		Quadtree<index, false> quad(R, true, alpha, capacity, balance);
 		for (index i = 0; i < n; i++) {
 			quad.addContent(i, {angles[i], radii[i]});
 		}
@@ -263,7 +365,7 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 		timer.start();
 
 		for (index i = 0; i < iterations; i++) {
-			index toMove = Aux::Random::integer(n);
+			index toMove = Aux::Random::index(n);
 
 			//remove old position and nodes
 			quad.removeContent(toMove, {angles[toMove], radii[toMove]});

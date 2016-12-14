@@ -305,7 +305,7 @@ TEST_F(GeneratorsBenchmark, benchmarkQuadTreeBalance) {
 }
 
 TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
-	const count iterations = 1000;
+	const count iterations = 10000;
 	const count minN = 1 << 13;
 	const count maxN = 1 << 23;
 
@@ -340,13 +340,22 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 		EXPECT_EQ(n, G.numberOfNodes());
 
 		const double R = 2*log(n)+C;
+
+		Aux::Timer constructionTimer;
+		constructionTimer.start();
 		//KDTreeHyperbolic<index, false> quad({0,0},{2*M_PI,R}, 10);
 		Quadtree<index, false> quad(R, true, alpha, capacity, balance);
 		for (index i = 0; i < n; i++) {
 			quad.addContent(i, {angles[i], radii[i]});
 		}
+		constructionTimer.stop();
+		std::cout << "Quadtree construction took " << constructionTimer.elapsedMilliseconds() << " milliseconds." << std::endl;
 
+		constructionTimer.start();
 		quad.trim();
+		constructionTimer.stop();
+		std::cout << "Quadtree trimming took " << constructionTimer.elapsedMilliseconds() << " milliseconds." << std::endl;
+
 
 		double beta = 1/T;
 		assert(beta == beta);

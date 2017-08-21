@@ -143,6 +143,10 @@ public:
 		return root.countLeaves();
 	}
 
+	count printQueries() const {
+		return root.printQueries();
+	}
+
 	index indexSubtree(index nextID) {
 		return root.indexSubtree(nextID);
 	}

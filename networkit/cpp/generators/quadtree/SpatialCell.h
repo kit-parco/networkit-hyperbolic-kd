@@ -42,6 +42,7 @@ public:
 		isLeaf = true;
 		subTreeSize = 0;
 		ID = 0;
+		queries = 0;
 	}
 
 	virtual void split() = 0;
@@ -222,7 +223,20 @@ public:
 		}
 	}
 
-	virtual count getElementsProbabilistically(const Point<double> &query, std::function<double(double)> prob, std::vector<T> &result) const {
+	virtual count printQueries() const {
+		count result = 0;
+		if (isLeaf) {
+			result = queries;
+			INFO("Leaf at (", minCoords[0], ",", minCoords[1],") to (", maxCoords[0], ",", maxCoords[1],") had ", queries, " queries.");
+		} else {
+			for (auto child : children) {
+				result += child->printQueries();
+			}
+		}
+		return result;
+	}
+
+	virtual count getElementsProbabilistically(const Point<double> &query, std::function<double(double)> prob, std::vector<T> &result) {
 		auto distancePair = distances(query);
 		double probUB = prob(distancePair.first);
 		double probLB = prob(distancePair.second);
@@ -244,6 +258,7 @@ public:
 		count candidatesTested = 0;
 
 		if (isLeaf) {
+			queries++;
 			const count lsize = content.size();
 			TRACE("Leaf of size ", lsize);
 			for (index i = 0; i < lsize; i++) {
@@ -304,10 +319,11 @@ public:
 		return candidatesTested;
 	}
 
-	virtual void maybeGetKthElement(double upperBound, Point<double> query, std::function<double(double)> prob, index k, std::vector<T> &circleDenizens) const {
+	virtual void maybeGetKthElement(double upperBound, Point<double> query, std::function<double(double)> prob, index k, std::vector<T> &circleDenizens) {
 			TRACE("Maybe get element ", k, " with upper Bound ", upperBound);
 			assert(k < size());
 			if (isLeaf) {
+				queries++;
 				double dist = distance(query, k);
 
 				double acceptance = prob(dist)/upperBound;
@@ -640,15 +656,14 @@ public:
 	}
 
 	index getCellID(const Point<double> query) const {
-		if (!this->responsible(query)) return -1;
+		if (!this->responsible(query)) return NetworKit::none;
 		if (this->isLeaf) return getID();
 		else {
 			for (int i = 0; i < 4; i++) {
 				index childresult = this->children[i]->getCellID(query);
-				if (childresult >= 0) return childresult;
+				if (childresult != NetworKit::none) return childresult;
 			}
-			assert(false); //if responsible
-			return -1;
+			throw std::runtime_error("Tree structure inconsistent: No responsible child found.");
 		}
 	}
 
@@ -690,6 +705,7 @@ protected:
 	count capacity;
 	index subTreeSize;
 	index ID;
+	count queries;
 
 private:
 	static const unsigned coarsenLimit = 4;

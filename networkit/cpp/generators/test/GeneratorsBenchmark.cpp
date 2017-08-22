@@ -217,7 +217,8 @@ TEST_F(GeneratorsBenchmark, benchmarkQuadTreeBalance) {
 
 	const count capacity = 20;
 
-	const vector<double> balanceList = {0.9, 0.99, 0.999, 0.9999};
+	// 0.9, 0.99, 0.999, 0.9999
+	const vector<double> balanceList = {0.5, 0.75, 0.875, 0.9375, 0.96875, 0.984375, 0.992188, 0.996094, 0.998047, 0.999023, 0.999512, 0.999756, 0.999878};
 
 	std::string filenamePrefix = "test-"+std::to_string(n);
 	Graph G;
@@ -227,8 +228,8 @@ TEST_F(GeneratorsBenchmark, benchmarkQuadTreeBalance) {
 	EXPECT_EQ(n, angles.size());
 	EXPECT_EQ(n, radii.size());
 	EXPECT_EQ(n, G.numberOfNodes());
-	std::cout << "%" << filenamePrefix << std::endl;
-	std::cout << "n\tseed\tbalance\titer\tms\tedges" << std::endl;
+	std::cerr << "%" << filenamePrefix << std::endl;
+	std::cerr << "n\tseed\tbalance\titer\ttime\tedges" << std::endl;
 
 	for (index b = 0; b < balanceList.size(); b++) {
 		double balance = balanceList[b];
@@ -236,7 +237,7 @@ TEST_F(GeneratorsBenchmark, benchmarkQuadTreeBalance) {
 		int seed = std::time(NULL);
 		Aux::Random::setSeed(seed, false);
 
-		std::cout << n << "\t" << seed << "\t" << balance << "\t";
+		std::cerr << n << "\t" << seed << "\t" << balance << "\t";
 
 		const double R = 2*log(n)+C;
 		Quadtree<index, false> quad(R, true, alpha, capacity, balance);
@@ -293,8 +294,77 @@ TEST_F(GeneratorsBenchmark, benchmarkQuadTreeBalance) {
 			totalNeighbours += newNeighbors.size();
 		}
 		timer.stop();
-		std::cout << iterations << "\t" << timer.elapsedMilliseconds() << "\t" << totalNeighbours << std::endl;
+		std::cerr << iterations << "\t" << timer.elapsedMilliseconds() << "\t" << totalNeighbours << std::endl;
 	}
+}
+
+TEST_F(GeneratorsBenchmark, benchmarkQueryCount) {
+	const count iterations = 10000;
+	const count n = 1 << 13;
+
+	const double alpha = 0.75;
+	const double T = 0.1;
+	const double C = -1;
+
+	const double balance = 0.5;
+	const count capacity = 20;
+
+	std::string filenamePrefix = "test-"+std::to_string(n);
+	Graph G;
+	vector<double> angles;
+	vector<double> radii;
+	HyperbolicGraphReader::readGraph(filenamePrefix, G, angles, radii);
+	EXPECT_EQ(n, angles.size());
+	EXPECT_EQ(n, radii.size());
+	EXPECT_EQ(n, G.numberOfNodes());
+
+	const double R = 2*log(n)+C;
+
+	Quadtree<index, false> quad(R, true, alpha, capacity, balance);
+	for (index i = 0; i < n; i++) {
+		quad.addContent(i, {angles[i], radii[i]});
+	}
+	quad.trim();
+
+	double beta = 1/T;
+	assert(beta == beta);
+	auto edgeProb = [beta, R](double distance) -> double {return 1 / (exp(beta*(distance-R)/2)+1);};
+
+	double maxcdf = cosh(alpha*R);
+	std::uniform_real_distribution<double> phidist{0, 2*M_PI};
+	std::uniform_real_distribution<double> rdist{1, maxcdf};
+
+	int seed = std::time(NULL);
+	Aux::Random::setSeed(seed, false);
+
+	for (index i = 0; i < iterations; i++) {
+		index toMove = Aux::Random::index(n);
+
+		//remove old position and nodes
+		quad.removeContent(toMove, {angles[toMove], radii[toMove]});
+		for (index neighbor : G.neighbors(toMove)) {
+			G.removeEdge(toMove, neighbor);
+		}
+
+		//get new position
+		angles[toMove] = phidist(Aux::Random::getURNG());
+		double random = rdist(Aux::Random::getURNG());
+		radii[toMove] = (acosh(random)/alpha);
+		if (radii[toMove] == R) radii[toMove] = std::nextafter(radii[toMove], 0);
+
+		quad.addContent(toMove, {angles[toMove], radii[toMove]});
+
+		assert(quad.size() == n);
+
+		//get new edges
+		vector<index> newNeighbors;
+		quad.getElementsProbabilistically({angles[toMove], radii[toMove]}, edgeProb, newNeighbors);
+		for (index u : newNeighbors) {
+			G.addEdge(u, toMove);
+		}
+	}
+
+	quad.printQueries();
 }
 
 TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
@@ -310,10 +380,11 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 	const count capacity = 20;
 
 	//TODO: add commit number to benchmark output
-	std::cout << "n\tconstruct\ttrim\tseed\titer\ttime\tqueries" << std::endl;
+	std::cerr << "%C:" << C << ", T:" << T << ", alpha:" << alpha << ", balance:" << balance << ", capacity:" << capacity << std::endl;
+	std::cerr << "n\tconstruct\ttrim\tseed\titer\ttime\tqueries" << std::endl;
 
 	for (count n = minN; n <= maxN; n *= 2) {
-		std::cout << n << "\t";
+		std::cerr << n << "\t";
 		std::string commandstring = std::string("/home/moritzl/Gadgets/hyperbolic-embedder/embedder") + std::string(" --generate test-") + std::to_string(n)
 				+ std::string(" --n ") + std::to_string(n) + std::string(" --C ") + std::to_string(C) + std::string(" --T ") + std::to_string(T) + std::string(" --alpha ") + std::to_string(alpha);
 
@@ -345,13 +416,13 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 			quad.addContent(i, {angles[i], radii[i]});
 		}
 		constructionTimer.stop();
-		std::cout << constructionTimer.elapsedMilliseconds() << "\t";
+		std::cerr << constructionTimer.elapsedMilliseconds() << "\t";
 		//std::cout << "Quadtree construction took " << constructionTimer.elapsedMilliseconds() << " milliseconds." << std::endl;
 
 		constructionTimer.start();
 		quad.trim();
 		constructionTimer.stop();
-		std::cout << constructionTimer.elapsedMilliseconds() << "\t";
+		std::cerr << constructionTimer.elapsedMilliseconds() << "\t";
 		//std::cout << "Quadtree trimming took " << constructionTimer.elapsedMilliseconds() << " milliseconds." << std::endl;
 
 
@@ -365,7 +436,7 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 
 		int seed = std::time(NULL);
 		Aux::Random::setSeed(seed, false);
-		std::cout << seed << "\t";
+		std::cerr << seed << "\t";
 
 		//now measure the dynamic part
 		Aux::Timer timer;
@@ -399,7 +470,7 @@ TEST_F(GeneratorsBenchmark, benchmarkExternalEmbedderCall) {
 		}
 		timer.stop();
 		count totalQueries = quad.printQueries();
-		std::cout << iterations << "\t" << timer.elapsedMilliseconds() << "\t" << totalQueries << std::endl;
+		std::cerr << iterations << "\t" << timer.elapsedMilliseconds() << "\t" << totalQueries << std::endl;
 	}
 }
 
